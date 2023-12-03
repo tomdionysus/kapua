@@ -11,7 +11,7 @@
 
 namespace Kapua {
 
-enum LogLevel_t {
+enum LogLevel_t : uint8_t {
   LOG_LEVEL_ERROR = 0,
   LOG_LEVEL_WARN = 1,
   LOG_LEVEL_INFO = 2,

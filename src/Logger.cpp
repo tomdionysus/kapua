@@ -1,3 +1,8 @@
+//
+// Kapua Logger classes
+//
+// Author: Tom Cully <mail@tomcully.com>
+//
 #include "Logger.hpp"
 
 #include <ctime>

@@ -8,7 +8,7 @@ int main() {
 
 	Kapua::ScopedLogger logger("Core", &stdlog);
 
-	Kapua::Core core(logger);
+	Kapua::Core core(&logger);
 
 	printf("Kapua Example\n");
 }

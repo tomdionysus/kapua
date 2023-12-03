@@ -7,16 +7,19 @@ project(kapua CXX C ASM)
 
 include_directories (${CMAKE_SOURCE_DIR}/src)
 
+add_library(
+	kapua SHARED 
+
+	src/Logger.cpp
+	src/Node.cpp
+	src/Protocol.cpp
+	src/Core.cpp
+	src/LocalDiscover.cpp
+)
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-add_library(
-	kapua
-
-	src/core.cpp
-	src/logger.cpp
-)
 
 # Examples
 
