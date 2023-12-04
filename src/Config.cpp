@@ -118,14 +118,14 @@ ParserStatus Config::parse_yaml_document(yaml_parser_t* parser,
         cout << "YAML_MAPPING_START_EVENT\n";
         node->type = YamlNode::MAPPING;
         status = parse_yaml_mapping(parser, node);
-        return status;
+        break;
 
       // Whole doc is a sequence
       case YAML_SEQUENCE_START_EVENT:
         cout << "YAML_SEQUENCE_START_EVENT\n";
         node->type = YamlNode::SEQUENCE;
         status = parse_yaml_sequence(parser, node);
-        return status;
+        break;
 
       default:
         cout << "Unknown Event Type " + std::to_string(event.type) + "\n";
@@ -164,6 +164,7 @@ ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser,
           delete node;
           return status;
         }
+        cout << "->Push Child\n";
         parent->children.push_back(node);
         break;
 
@@ -172,8 +173,6 @@ ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser,
         return ParserStatus::ERROR;
     }
   }
-
-  return ParserStatus::OK;
 }
 
 ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser,
@@ -184,8 +183,6 @@ ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser,
   YamlNode* node;
 
   while (true) {
-    if (!yaml_parser_parse(parser, &event)) return ParserStatus::ERROR;
-
     node = new YamlNode();
     ParserStatus status = parse_yaml_value(parser, node);
     if (status == ParserStatus::ERROR) {
@@ -193,6 +190,7 @@ ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser,
       return status;
     }
     if (status == ParserStatus::STOP) return status;
+    cout << "-> Push Child - parse_yaml_sequence\n";
     parent->children.push_back(node);
   }
 
@@ -211,14 +209,12 @@ ParserStatus Config::parse_yaml_value(yaml_parser_t* parser, YamlNode* node) {
     // Start of a key/value map
     case YAML_MAPPING_START_EVENT:
       cout << "YAML_MAPPING_START_EVENT - parse_yaml_value\n";
-      childnode = new YamlNode();
-      childnode->type = YamlNode::MAPPING;
+      node->type = YamlNode::MAPPING;
       status = parse_yaml_mapping(parser, node);
       if (status == ParserStatus::ERROR) {
-        delete childnode;
         return status;
       }
-      node->children.push_back(childnode);
+      cout << "->Push Child\n";
       return ParserStatus::OK;
 
     case YAML_MAPPING_END_EVENT:
