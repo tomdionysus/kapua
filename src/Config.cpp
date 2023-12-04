@@ -69,8 +69,7 @@ void Config::print_yaml_node(YamlNode* node, int level) {
       std::cout << "SEQUENCE, ";
       break;
   }
-  std::cout << node->key << ": " << node->value
-            << std::endl;
+  std::cout << node->key << ": " << node->value << std::endl;
   for (YamlNode* child : node->children) {
     print_yaml_node(child, level + 1);
   }
@@ -78,9 +77,7 @@ void Config::print_yaml_node(YamlNode* node, int level) {
 
 void Config::dump() {}
 
-ParserStatus Config::parse_yaml_document(yaml_parser_t* parser,
-                                         YamlNode* node) {
-  cout << "> parse_yaml_document\n";
+ParserStatus Config::parse_yaml_document(yaml_parser_t* parser, YamlNode* node) {
   yaml_event_t event;
   ParserStatus status;
 
@@ -89,46 +86,36 @@ ParserStatus Config::parse_yaml_document(yaml_parser_t* parser,
     if (!yaml_parser_parse(parser, &event)) return ParserStatus::ERROR;
 
     switch (event.type) {
-      // Ignore these events
+      // Something has gone wrong
       case YAML_NO_EVENT:
-        cout << "YAML_NO_EVENT\n";
-        break;
+        return ParserStatus::ERROR;
+
+      // Ignore these events
       case YAML_STREAM_START_EVENT:
-        cout << "YAML_STREAM_START_EVENT\n";
-        break;
       case YAML_DOCUMENT_START_EVENT:
-        cout << "YAML_DOCUMENT_START_EVENT\n";
-        break;
       case YAML_DOCUMENT_END_EVENT:
-        cout << "YAML_DOCUMENT_END_EVENT\n";
+      // TODO: Support Alias Events
+      case YAML_ALIAS_EVENT:
         break;
 
       // End of Stream
       case YAML_STREAM_END_EVENT:
-        cout << "YAML_STREAM_END_EVENT\n";
         return ParserStatus::OK;
-
-      // No idea what this is
-      case YAML_ALIAS_EVENT:
-        cout << "YAML_ALIAS_EVENT\n";
-        break;
 
       // Whole doc is a mapping
       case YAML_MAPPING_START_EVENT:
-        cout << "YAML_MAPPING_START_EVENT\n";
         node->type = YamlNode::MAPPING;
         status = parse_yaml_mapping(parser, node);
         break;
 
       // Whole doc is a sequence
       case YAML_SEQUENCE_START_EVENT:
-        cout << "YAML_SEQUENCE_START_EVENT\n";
         node->type = YamlNode::SEQUENCE;
         status = parse_yaml_sequence(parser, node);
         break;
 
       default:
-        cout << "Unknown Event Type " + std::to_string(event.type) + "\n";
+        _logger->error("YAML Parser - Unknown Event Type " + std::to_string(event.type));
         return ParserStatus::ERROR;
     }
   }
@@ -136,9 +123,7 @@ ParserStatus Config::parse_yaml_document(yaml_parser_t* parser,
   return ParserStatus::ERROR;
 }
 
-ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser,
-                                        YamlNode* parent) {
-  cout << "> parse_yaml_mapping\n";
+ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser, YamlNode* parent) {
   yaml_event_t event;
   ParserStatus status;
   YamlNode* node;
@@ -149,35 +134,28 @@ ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser,
     switch (event.type) {
       // We found the end of the sequence
       case YAML_MAPPING_END_EVENT:
-        cout << "YAML_MAPPING_END_EVENT - parse_yaml_mapping\n";
         return ParserStatus::OK;
 
       // A scalar value, the value of which can be a scalar, map or sequence.
       case YAML_SCALAR_EVENT:
-        cout << "YAML_SCALAR_EVENT - parse_yaml_mapping\n";
-
         node = new YamlNode();
         node->key = reinterpret_cast<const char*>(event.data.scalar.value);
-        cout << " - Key: " + node->key + "\n";
         status = parse_yaml_value(parser, node);
         if (status != ParserStatus::OK) {
           delete node;
           return status;
         }
-        cout << "->Push Child\n";
         parent->children.push_back(node);
         break;
 
       default:
-        cout << "Unknown Event Type " + std::to_string(event.type) + "\n";
+        _logger->error("YAML Parser - Unknown Event Type " + std::to_string(event.type));
         return ParserStatus::ERROR;
     }
   }
 }
 
-ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser,
-                                         YamlNode* parent) {
-  cout << "> parse_yaml_sequence\n";
+ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser, YamlNode* parent) {
   yaml_event_t event;
 
   YamlNode* node;
@@ -190,7 +168,6 @@ ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser,
       return status;
     }
     if (status == ParserStatus::STOP) return status;
-    cout << "-> Push Child - parse_yaml_sequence\n";
     parent->children.push_back(node);
   }
 
@@ -198,7 +175,6 @@ ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser,
 }
 
 ParserStatus Config::parse_yaml_value(yaml_parser_t* parser, YamlNode* node) {
-  cout << "> parse_yaml_value\n";
   yaml_event_t event;
   ParserStatus status;
   YamlNode* childnode;
@@ -208,41 +184,38 @@ ParserStatus Config::parse_yaml_value(yaml_parser_t* parser, YamlNode* node) {
   switch (event.type) {
     // Start of a key/value map
     case YAML_MAPPING_START_EVENT:
-      cout << "YAML_MAPPING_START_EVENT - parse_yaml_value\n";
       node->type = YamlNode::MAPPING;
       status = parse_yaml_mapping(parser, node);
       if (status == ParserStatus::ERROR) {
         return status;
       }
-      cout << "->Push Child\n";
       return ParserStatus::OK;
 
     case YAML_MAPPING_END_EVENT:
-      cout << "YAML_MAPPING_END_EVENT - parse_yaml_value SHOULD NOT HAPPEN\n";
       return ParserStatus::STOP;
 
     // Start of a sequence
     case YAML_SEQUENCE_START_EVENT:
       node->type = YamlNode::SEQUENCE;
-      cout << "YAML_SEQUENCE_START_EVENT - parse_yaml_value\n";
       status = parse_yaml_sequence(parser, node);
       if (status == ParserStatus::ERROR) return ParserStatus::ERROR;
       return ParserStatus::OK;
 
     case YAML_SEQUENCE_END_EVENT:
-      cout << "YAML_SEQUENCE_END_EVENT - parse_yaml_value\n";
       return ParserStatus::STOP;
 
     // A scalar value, the value of which can be a scalar, map or sequence.
     case YAML_SCALAR_EVENT:
-      cout << "YAML_SCALAR_EVENT - parse_yaml_value\n";
       node->type = YamlNode::SCALAR;
       node->value = reinterpret_cast<const char*>(event.data.scalar.value);
-      cout << " - Value: " + node->value + "\n";
       return ParserStatus::OK;
 
+      // TODO: Support Aliases
+    case YAML_ALIAS_EVENT:
+      return ParserStatus::ERROR;
+
     default:
-      cout << "Unknown Event Type " + std::to_string(event.type) + "\n";
+      _logger->error("YAML Parser - Unknown Event Type " + std::to_string(event.type));
       return ParserStatus::ERROR;
   }
 }

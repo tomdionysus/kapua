@@ -29,9 +29,7 @@ void IOStreamLogger ::warn(std::string log) {
   cout << _getTimeStr() << " [WARN ] " << log << "\n";
 }
 
-void IOStreamLogger ::error(std::string log) {
-  cerr << _getTimeStr() << " [ERROR] " << log << "\n";
-}
+void IOStreamLogger ::error(std::string log) { cerr << _getTimeStr() << " [ERROR] " << log << "\n"; }
 
 std::string IOStreamLogger ::_getTimeStr() {
   time_t now;
@@ -46,20 +44,12 @@ ScopedLogger ::ScopedLogger(std::string prefix, Logger* logger) {
   _prefix = prefix;
 }
 
-void ScopedLogger ::debug(std::string log) {
-  _logger->debug("(" + _prefix + ") " + log);
-}
+void ScopedLogger ::debug(std::string log) { _logger->debug("(" + _prefix + ") " + log); }
 
-void ScopedLogger ::info(std::string log) {
-  _logger->info("(" + _prefix + ") " + log);
-}
+void ScopedLogger ::info(std::string log) { _logger->info("(" + _prefix + ") " + log); }
 
-void ScopedLogger ::warn(std::string log) {
-  _logger->warn("(" + _prefix + ") " + log);
-}
+void ScopedLogger ::warn(std::string log) { _logger->warn("(" + _prefix + ") " + log); }
 
-void ScopedLogger ::error(std::string log) {
-  _logger->error("(" + _prefix + ") " + log);
-}
+void ScopedLogger ::error(std::string log) { _logger->error("(" + _prefix + ") " + log); }
 
 }  // namespace Kapua
