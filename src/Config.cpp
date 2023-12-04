@@ -9,17 +9,20 @@ namespace Kapua {
 YamlNode::YamlNode() {}
 
 YamlNode::~YamlNode() {
-  for (YamlNode* child : children) {
-    delete child;
-  }
+  for (YamlNode* child : children) delete child;
+  children.empty();
 }
 
 Config::Config(Logger* logger, std::string filename = "config.yaml") {
   _logger = new ScopedLogger("Configuration", logger);
   _filename = filename;
+  _yaml_root = new YamlNode();
 }
 
-Config::~Config() { delete _logger; }
+Config::~Config() { 
+  delete _yaml_root;
+  delete _logger; 
+}
 
 int Config::load() {
   // Open and read the YAML file
@@ -36,20 +39,21 @@ int Config::load() {
   yaml_parser_set_input_file(&parser, file);
 
   _logger->debug("Parsing config file");
-  YamlNode root_node;
-  parse_yaml_document(&parser, &root_node);
+  parse_yaml_document(&parser, _yaml_root);
 
   _logger->debug("Closing config file " + _filename);
   fclose(file);
-
-  // Print the AST for debugging
-  _logger->debug("Printing config");
-  print_yaml_node(&root_node);
 
   // Clean up
   yaml_parser_delete(&parser);
 
   return 0;
+}
+
+void Config::dump() {
+    // Print the AST for debugging
+  _logger->debug("Printing config");
+  print_yaml_node(_yaml_root);
 }
 
 // Function to print the AST for debugging
@@ -74,8 +78,6 @@ void Config::print_yaml_node(YamlNode* node, int level) {
     print_yaml_node(child, level + 1);
   }
 }
-
-void Config::dump() {}
 
 ParserStatus Config::parse_yaml_document(yaml_parser_t* parser, YamlNode* node) {
   yaml_event_t event;

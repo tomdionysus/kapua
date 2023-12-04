@@ -22,8 +22,6 @@ class YamlNode {
   YamlNode();
   ~YamlNode();
 
-  void delete_all();
-
   enum NodeType { SCALAR, MAPPING, SEQUENCE };
 
   NodeType type;
@@ -45,6 +43,7 @@ class Config {
  protected:
   Logger* _logger;
   std::string _filename;
+  YamlNode* _yaml_root;
 
   void print_yaml_node(YamlNode* node, int level = 0);
   ParserStatus parse_yaml_document(yaml_parser_t* parser, YamlNode* parent);

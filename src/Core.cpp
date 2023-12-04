@@ -11,6 +11,7 @@ Core ::Core(Logger* logger, Config* config) {
   _config = config;
   _logger->debug("Loading config...");
   _config->load();
+  _logger->debug("Printing config...");
   _config->dump();
 }
 
