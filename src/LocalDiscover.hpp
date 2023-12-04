@@ -21,11 +21,12 @@ class LocalDiscover {
   ~LocalDiscover();
 
   bool start(int port);
-  bool receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr);
-  bool send(const char* message, const sockaddr_in& client_addr);
   void shutdown();
 
  private:
+  bool _receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr);
+  bool _send(const char* buffer, size_t len, const sockaddr_in& client_addr);
+
   int _socket_fd;
   sockaddr_in _server_addr;
 

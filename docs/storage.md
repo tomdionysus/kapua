@@ -1,0 +1,3 @@
+# Storage and Replication
+
+All storage is contained in client nodes. Each client node on signup allocates an amount of disk space (1Gb minimum) which becomes part of the distrubuted block store, and an amount of compute resource, which becomes part of the distributed compute pool. All blocks stored on a node are encrypted with the originator key, and a node may store blocks from any number of originators.

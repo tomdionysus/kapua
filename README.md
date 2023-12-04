@@ -1,21 +1,46 @@
 # kapua
 
-A fully decentralised storage, compute, database and networking platform, in C++.
+A fully decentralised storage, compute, database and networking platform, in C++11.
 
-## Project Goals
+## Building
 
-* A fully decentralised, replicated, soft cluster block-storage designed for use over the internet.
-* A distributed key-value store based on the above.
-* A distributed file system based on the above.
-* A distributed DNS system based on the above.
-* A distributed queue based on the above.
-* A Virtual Private Cloud networking and security model based on the above.
-* A distributed secure compute model based on the above.
+### Dependencies:
 
-## Infrastructure
+* [cmake](https://github.com/Kitware/CMake)
+* [curl](https://github.com/curl/curl)
+* [libyaml](https://github.com/yaml/libyaml)
 
-All infrastructure is contained and implemened in client nodes. Client nodes are connected over IP, and may join or leave the system at any time.
+**Debain/Ubuntu/etc**
 
-## Storage and Replication
+```sh
+apt-get install cmake curl libyaml
+```
 
-All storage is contained in client nodes. Each client node on signup allocates an amount of disk space (1Gb minimum) which becomes part of the distrubuted block store, and an amount of compute resource, which becomes part of the distributed compute pool. All blocks stored on a node are encrypted with the originator key, and a node may store blocks from any number of originators.
+**MacOS**
+
+```sh
+brew install curl libyaml
+```
+
+### Build
+
+```sh
+git clone https://github.com/tomdionysus/kapua
+cd kapua
+mkdir build
+cd build
+cmake ..
+make
+```
+
+## Documentation
+
+* [Project Goals](docs/goals.md)
+* [Philosophy](docs/philosophy.md)
+* [Infrastructure](docs/infrastructure.md)
+* [Routing](docs/routing.md)
+* [Storage](docs/storage.md)
+
+## License
+
+Kapua is licensed under the [MIT License](https://en.wikipedia.org/wiki/MIT_License). Please see [LICENSE](LICENSE) for details.

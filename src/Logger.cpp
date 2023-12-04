@@ -5,21 +5,27 @@
 //
 #include "Logger.hpp"
 
-#include <ctime>
-
 using namespace std;
 
 namespace Kapua {
 
+IOStreamLogger ::IOStreamLogger(std::ostream* stream, LogLevel_t level) {
+  _stream = stream;
+  _level = level;
+}
+
 void IOStreamLogger ::debug(std::string log) {
+  if (_level < 3) return;
   cout << _getTimeStr() << " [DEBUG] " << log << "\n";
 }
 
 void IOStreamLogger ::info(std::string log) {
+  if (_level < 2) return;
   cout << _getTimeStr() << " [INFO ] " << log << "\n";
 }
 
 void IOStreamLogger ::warn(std::string log) {
+  if (_level < 1) return;
   cout << _getTimeStr() << " [WARN ] " << log << "\n";
 }
 

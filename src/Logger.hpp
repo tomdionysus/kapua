@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <ctime>
 #include <iostream>
 #include <string>
 
@@ -20,6 +21,7 @@ enum LogLevel_t : uint8_t {
 
 class Logger {
  public:
+  virtual ~Logger() {}
   virtual void debug(std::string log) = 0;
   virtual void info(std::string log) = 0;
   virtual void warn(std::string log) = 0;
@@ -28,18 +30,25 @@ class Logger {
 
 class IOStreamLogger : public Logger {
  public:
+  IOStreamLogger(std::ostream* stream, LogLevel_t level);
+  ~IOStreamLogger() {}
+
   virtual void debug(std::string log) override;
   virtual void info(std::string log) override;
   virtual void warn(std::string log) override;
   virtual void error(std::string log) override;
 
  private:
+  std::ostream* _stream;
+  LogLevel_t _level;
+
   std::string _getTimeStr();
 };
 
 class ScopedLogger : public Logger {
  public:
   ScopedLogger(std::string prefix, Logger* logger);
+  ~ScopedLogger() {}
 
   virtual void debug(std::string log) override;
   virtual void info(std::string log) override;

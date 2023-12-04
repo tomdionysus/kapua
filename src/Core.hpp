@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Config.hpp"
 #include "Logger.hpp"
 #include "Node.hpp"
 
@@ -26,17 +27,18 @@ typedef struct Version {
 
 class Core {
  public:
-  Core(Logger* logger);
+  Core(Logger* logger, Config* config);
   ~Core();
 
-  void addNode(uint64_t id, Node* node);
-  void removeNode(uint64_t id);
-  Node* findNode(uint64_t id);
+  void add_node(uint64_t id, Node* node);
+  void remove_node(uint64_t id);
+  Node* find_node(uint64_t id);
 
-  void getVersion(Version_t* version);
+  void get_version(Version_t* version);
 
  protected:
   Logger* _logger;
+  Config* _config;
 
   std::unordered_map<uint64_t, Node*> _nodes;
   std::mutex _nodes_mutex;
