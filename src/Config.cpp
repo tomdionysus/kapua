@@ -19,9 +19,9 @@ Config::Config(Logger* logger, std::string filename = "config.yaml") {
   _yaml_root = new YamlNode();
 }
 
-Config::~Config() { 
+Config::~Config() {
   delete _yaml_root;
-  delete _logger; 
+  delete _logger;
 }
 
 int Config::load() {
@@ -51,7 +51,7 @@ int Config::load() {
 }
 
 void Config::dump() {
-    // Print the AST for debugging
+  // Print the AST for debugging
   _logger->debug("Printing config");
   print_yaml_node(_yaml_root);
 }
