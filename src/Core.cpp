@@ -7,7 +7,7 @@ using namespace std;
 namespace Kapua {
 Core ::Core(Logger* logger, Config* config) {
   _logger = logger;
-  _logger->debug("Kapura startup");
+  _logger->debug("Kapua startup");
   _config = config;
   _logger->debug("Loading config...");
   _config->load();
@@ -15,7 +15,7 @@ Core ::Core(Logger* logger, Config* config) {
   _config->dump();
 }
 
-Core ::~Core() { _logger->info("Kapura shutdown"); }
+Core ::~Core() { _logger->info("Kapua shutdown"); }
 
 void Core::add_node(uint64_t id, Node* node) {
   std::lock_guard<std::mutex> lock(_nodes_mutex);
