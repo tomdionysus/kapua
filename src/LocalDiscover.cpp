@@ -32,7 +32,6 @@ bool LocalDiscover::start(int port) {
 
 bool LocalDiscover::stop() {
   _running_mutex.lock();
-  _logger->debug("Stopping...");
   if (!_running) {
     _logger->warn("stop called, but thread not running");
     _running_mutex.unlock();
@@ -60,14 +59,6 @@ bool LocalDiscover::_listen(int port) {
   _server_addr.sin_family = AF_INET;
   _server_addr.sin_port = htons(port);
   _server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-  // Set the recieve timeout
-  struct timeval tv;
-  tv.tv_sec = 1;
-  tv.tv_usec = 0;
-  if (setsockopt(_socket_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-    _logger->error("Failed setting socket options");
-  }
 
   // Bind the socket
   if (bind(_socket_fd, (struct sockaddr*)&_server_addr, sizeof(_server_addr)) == -1) {
@@ -118,8 +109,21 @@ void LocalDiscover::_main_loop() {
 }
 
 ssize_t LocalDiscover::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
-  socklen_t client_len = sizeof(client_addr);
-  return recvfrom(_socket_fd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &client_len);
+  struct timeval tv;
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
+
+  fd_set rfds;
+  FD_ZERO(&rfds);
+  FD_SET(_socket_fd, &rfds);
+  int recVal = select(_socket_fd + 1, &rfds, NULL, NULL, &tv);
+
+  if (recVal > 0) {
+    socklen_t client_len = sizeof(client_addr);
+    return recvfrom(_socket_fd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &client_len);
+  } else {
+    return -1;
+  }
 }
 
 ssize_t LocalDiscover::_send(const char* buffer, size_t len, const sockaddr_in& client_addr) {
