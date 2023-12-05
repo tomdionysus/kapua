@@ -10,13 +10,17 @@ namespace Kapua {
 LocalDiscover::LocalDiscover(Logger* logger) : _socket_fd(-1) { _logger = new ScopedLogger("LocalDiscover", logger); }
 
 LocalDiscover::~LocalDiscover() {
-  stop();
+  _running_mutex.lock();
+  bool is_running = _running;
+  _running_mutex.unlock();
+  if (is_running) stop();
   delete _logger;
 }
 
 bool LocalDiscover::start(int port) {
   std::lock_guard<std::mutex> lock(_running_mutex);
 
+  _logger->debug("Starting...");
   if (_running) {
     _logger->warn("start called, but thread already running");
     return false;
@@ -27,16 +31,18 @@ bool LocalDiscover::start(int port) {
 }
 
 bool LocalDiscover::stop() {
-  std::lock_guard<std::mutex> lock(_running_mutex);
-
+  _running_mutex.lock();
+  _logger->debug("Stopping...");
   if (!_running) {
     _logger->warn("stop called, but thread not running");
+    _running_mutex.unlock();
     return false;
   }
-
   _running = false;
+  _running_mutex.unlock();
 
   _main_thread->join();
+
   delete _main_thread;
   _main_thread = nullptr;
   return true;
@@ -46,7 +52,7 @@ bool LocalDiscover::_listen(int port) {
   // Create a socket
   _socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (_socket_fd == -1) {
-    _logger->error("Failed to create socke");
+    _logger->error("Failed creating socket");
     return false;
   }
 
@@ -57,15 +63,15 @@ bool LocalDiscover::_listen(int port) {
 
   // Set the recieve timeout
   struct timeval tv;
-  tv.tv_sec = 0;
-  tv.tv_usec = 100000;
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
   if (setsockopt(_socket_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-    _logger->error("Failed to set socket options");
+    _logger->error("Failed setting socket options");
   }
 
   // Bind the socket
   if (bind(_socket_fd, (struct sockaddr*)&_server_addr, sizeof(_server_addr)) == -1) {
-    _logger->error("Failed to bind socket");
+    _logger->error("Failed binding socket");
     _shutdown();
     return false;
   }
@@ -87,12 +93,16 @@ void LocalDiscover::_main_loop() {
   bool running = true;
   sockaddr_in from_addr;
 
+  _running_mutex.lock();
+  _running = true;
+  _running_mutex.unlock();
+
   while (running) {
     ssize_t len = _receive((char*)(&buffer), 65536, from_addr);
 
     if (len > -1) {
-      _logger->debug("Packet From " + std::string(inet_ntoa(from_addr.sin_addr)) + ":" +std::to_string(ntohs(from_addr.sin_port)) + ", " +
-                    std::to_string(len) + " bytes.");
+      _logger->debug("Packet From " + std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port)) + ", " +
+                     std::to_string(len) + " bytes.");
     }
 
     // Stop if flagged
@@ -100,6 +110,11 @@ void LocalDiscover::_main_loop() {
     running = _running;
     _running_mutex.unlock();
   }
+
+  _logger->debug("Stopping...");
+  _shutdown();
+
+  _logger->info("Stopped");
 }
 
 ssize_t LocalDiscover::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {

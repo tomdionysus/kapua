@@ -16,20 +16,26 @@ IOStreamLogger ::IOStreamLogger(std::ostream* stream, LogLevel_t level) {
 
 void IOStreamLogger ::debug(std::string log) {
   if (_level < 3) return;
+  std::lock_guard<std::mutex> lock(_logging_mutex);
   cout << _getTimeStr() << " [DEBUG] " << log << "\n";
 }
 
 void IOStreamLogger ::info(std::string log) {
   if (_level < 2) return;
+  std::lock_guard<std::mutex> lock(_logging_mutex);
   cout << _getTimeStr() << " [INFO ] " << log << "\n";
 }
 
 void IOStreamLogger ::warn(std::string log) {
   if (_level < 1) return;
+  std::lock_guard<std::mutex> lock(_logging_mutex);
   cout << _getTimeStr() << " [WARN ] " << log << "\n";
 }
 
-void IOStreamLogger ::error(std::string log) { cerr << _getTimeStr() << " [ERROR] " << log << "\n"; }
+void IOStreamLogger ::error(std::string log) {
+  std::lock_guard<std::mutex> lock(_logging_mutex);
+  cerr << _getTimeStr() << " [ERROR] " << log << "\n";
+}
 
 std::string IOStreamLogger ::_getTimeStr() {
   time_t now;

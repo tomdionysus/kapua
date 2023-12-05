@@ -42,6 +42,8 @@ class IOStreamLogger : public Logger {
   std::ostream* _stream;
   LogLevel_t _level;
 
+  std::mutex _logging_mutex;
+
   std::string _getTimeStr();
 };
 
