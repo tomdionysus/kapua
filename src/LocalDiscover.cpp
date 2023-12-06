@@ -1,25 +1,24 @@
 //
-// Kapua LocalDiscovery class
+// Kapua LocalDiscover class
 //
 // Author: Tom Cully <mail@tomcully.com>
+// Copyright (c) Tom Cully 2023 
 //
 #include "LocalDiscover.hpp"
 
 namespace Kapua {
 
-LocalDiscover::LocalDiscover(Logger* logger) : _socket_fd(-1) { _logger = new ScopedLogger("LocalDiscover", logger); }
+LocalDiscover::LocalDiscover(Logger* logger) : _socket_fd(-1) {
+  _logger = new ScopedLogger("LocalDiscover", logger);
+  _running = false;
+}
 
 LocalDiscover::~LocalDiscover() {
-  _running_mutex.lock();
-  bool is_running = _running;
-  _running_mutex.unlock();
-  if (is_running) stop();
+  if (_running) stop();
   delete _logger;
 }
 
 bool LocalDiscover::start(int port) {
-  std::lock_guard<std::mutex> lock(_running_mutex);
-
   _logger->debug("Starting...");
   if (_running) {
     _logger->warn("start called, but thread already running");
@@ -31,19 +30,17 @@ bool LocalDiscover::start(int port) {
 }
 
 bool LocalDiscover::stop() {
-  _running_mutex.lock();
   if (!_running) {
     _logger->warn("stop called, but thread not running");
-    _running_mutex.unlock();
     return false;
   }
   _running = false;
-  _running_mutex.unlock();
 
   _main_thread->join();
 
   delete _main_thread;
   _main_thread = nullptr;
+
   return true;
 }
 
@@ -81,25 +78,17 @@ bool LocalDiscover::_listen(int port) {
 
 void LocalDiscover::_main_loop() {
   char buffer[65536];
-  bool running = true;
   sockaddr_in from_addr;
 
-  _running_mutex.lock();
   _running = true;
-  _running_mutex.unlock();
 
-  while (running) {
+  while (_running) {
     ssize_t len = _receive((char*)(&buffer), 65536, from_addr);
 
     if (len > -1) {
       _logger->debug("Packet From " + std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port)) + ", " +
                      std::to_string(len) + " bytes.");
     }
-
-    // Stop if flagged
-    _running_mutex.lock();
-    running = _running;
-    _running_mutex.unlock();
   }
 
   _logger->debug("Stopping...");

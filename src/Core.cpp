@@ -1,3 +1,9 @@
+//
+// Kapua Core class
+//
+// Author: Tom Cully <mail@tomcully.com>
+// Copyright (c) Tom Cully 2023 
+//
 #include "Core.hpp"
 
 #include "Logger.hpp"

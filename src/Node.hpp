@@ -1,7 +1,8 @@
 //
-// Kapua core class
+// Kapua Node class
 //
 // Author: Tom Cully <mail@tomcully.com>
+// Copyright (c) Tom Cully 2023 
 //
 #pragma once
 

@@ -1,3 +1,9 @@
+//
+// Kapua LocalDiscover class
+//
+// Author: Tom Cully <mail@tomcully.com>
+// Copyright (c) Tom Cully 2023 
+//
 #pragma once
 
 #include <cstring>
@@ -39,8 +45,8 @@ class LocalDiscover {
   Logger* _logger;
 
   std::thread* _main_thread;
-  std::mutex _running_mutex;
-  bool _running;
+
+  std::atomic_bool _running;
 
 #ifdef _WIN32
   WSADATA _wsaData;

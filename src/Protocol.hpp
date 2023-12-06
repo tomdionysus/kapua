@@ -1,7 +1,8 @@
 //
-// Kapua protocol classes and structs
+// Kapua Protocol classes
 //
 // Author: Tom Cully <mail@tomcully.com>
+// Copyright (c) Tom Cully 2023 
 //
 #include <cstdint>
 
@@ -9,9 +10,7 @@ namespace Kapua {
 
 #define KAPUA_MAGIC_NUMBER 0x6b617075
 
-
 struct Packet {
-  
   enum PacketType : uint16_t {
     Ping,
     Pong,

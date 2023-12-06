@@ -1,9 +1,9 @@
 //
-// Kapua core class
+// Kapua Logger classes
 //
 // Author: Tom Cully <mail@tomcully.com>
+// Copyright (c) Tom Cully 2023 
 //
-
 #pragma once
 
 #include <ctime>
