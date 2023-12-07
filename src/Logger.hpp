@@ -39,8 +39,8 @@ class IOStreamLogger : public Logger {
   virtual void error(std::string log) override;
 
  private:
-  std::ostream* _stream;
-  LogLevel_t _level;
+  std::ostream* _output_stream;
+  LogLevel_t _log_level;
 
   std::mutex _logging_mutex;
 
@@ -50,6 +50,7 @@ class IOStreamLogger : public Logger {
 class ScopedLogger : public Logger {
  public:
   ScopedLogger(std::string prefix, Logger* logger);
+  ScopedLogger(std::string prefix, Logger* logger, LogLevel_t level);
   ~ScopedLogger() {}
 
   virtual void debug(std::string log) override;
@@ -60,5 +61,8 @@ class ScopedLogger : public Logger {
  protected:
   std::string _prefix;
   Logger* _logger;
+
+  LogLevel_t _log_level;
+  bool _using_log_level = false;
 };
 };  // namespace Kapua

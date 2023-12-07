@@ -7,6 +7,7 @@
 #include "Core.hpp"
 #include "LocalDiscover.hpp"
 #include "Logger.hpp"
+#include "Protocol.hpp"
 
 using namespace std;
 
@@ -38,7 +39,7 @@ void start() {
   core = new Kapua::Core(logger, config);
   local_discover = new Kapua::LocalDiscover(logger);
 
-  local_discover->start(11840);
+  local_discover->start(KAPUA_PORT);
 }
 
 void stop() {

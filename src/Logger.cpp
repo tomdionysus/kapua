@@ -11,24 +11,24 @@ using namespace std;
 namespace Kapua {
 
 IOStreamLogger ::IOStreamLogger(std::ostream* stream, LogLevel_t level) {
-  _stream = stream;
-  _level = level;
+  _output_stream = stream;
+  _log_level = level;
 }
 
 void IOStreamLogger ::debug(std::string log) {
-  if (_level < 3) return;
+  if (_log_level < 3) return;
   std::lock_guard<std::mutex> lock(_logging_mutex);
   cout << _getTimeStr() << " [DEBUG] " << log << "\n";
 }
 
 void IOStreamLogger ::info(std::string log) {
-  if (_level < 2) return;
+  if (_log_level < 2) return;
   std::lock_guard<std::mutex> lock(_logging_mutex);
   cout << _getTimeStr() << " [INFO ] " << log << "\n";
 }
 
 void IOStreamLogger ::warn(std::string log) {
-  if (_level < 1) return;
+  if (_log_level < 1) return;
   std::lock_guard<std::mutex> lock(_logging_mutex);
   cout << _getTimeStr() << " [WARN ] " << log << "\n";
 }
@@ -51,11 +51,27 @@ ScopedLogger ::ScopedLogger(std::string prefix, Logger* logger) {
   _prefix = prefix;
 }
 
-void ScopedLogger ::debug(std::string log) { _logger->debug("(" + _prefix + ") " + log); }
+ScopedLogger::ScopedLogger(std::string prefix, Logger* logger, LogLevel_t level) {
+  _logger = logger;
+  _prefix = prefix;
+  _log_level = level;
+  _using_log_level = true;
+}
 
-void ScopedLogger ::info(std::string log) { _logger->info("(" + _prefix + ") " + log); }
+void ScopedLogger ::debug(std::string log) {
+  if (_using_log_level && _log_level < 3) return;
+  _logger->debug("(" + _prefix + ") " + log);
+}
 
-void ScopedLogger ::warn(std::string log) { _logger->warn("(" + _prefix + ") " + log); }
+void ScopedLogger ::info(std::string log) {
+  if (_using_log_level && _log_level < 2) return;
+  _logger->info("(" + _prefix + ") " + log);
+}
+
+void ScopedLogger ::warn(std::string log) {
+  if (_using_log_level && _log_level < 1) return;
+  _logger->warn("(" + _prefix + ") " + log);
+}
 
 void ScopedLogger ::error(std::string log) { _logger->error("(" + _prefix + ") " + log); }
 

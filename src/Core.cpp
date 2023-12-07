@@ -13,15 +13,15 @@ using namespace std;
 namespace Kapua {
 Core ::Core(Logger* logger, Config* config) {
   _logger = logger;
-  _logger->debug("Kapua startup");
   _config = config;
+  _logger->debug("Starting...");
   _logger->debug("Loading config...");
   _config->load();
-  _logger->debug("Printing config...");
-  _config->dump();
+
+  _logger->debug("Started");
 }
 
-Core ::~Core() { _logger->info("Kapua shutdown"); }
+Core ::~Core() { _logger->debug("Stopped"); }
 
 void Core::add_node(uint64_t id, Node* node) {
   std::lock_guard<std::mutex> lock(_nodes_mutex);

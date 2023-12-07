@@ -6,9 +6,11 @@
 //
 #include "LocalDiscover.hpp"
 
+#include "Protocol.hpp"
+
 namespace Kapua {
 
-LocalDiscover::LocalDiscover(Logger* logger) : _socket_fd(-1) {
+LocalDiscover::LocalDiscover(Logger* logger) {
   _logger = new ScopedLogger("LocalDiscover", logger);
   _running = false;
 }
@@ -45,10 +47,10 @@ bool LocalDiscover::stop() {
 }
 
 bool LocalDiscover::_listen(int port) {
-  // Create a socket
-  _socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (_socket_fd == -1) {
-    _logger->error("Failed creating socket");
+  // Create a server socket
+  _server_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (_server_socket_fd == -1) {
+    _logger->error("Failed creating server socket");
     return false;
   }
 
@@ -57,9 +59,23 @@ bool LocalDiscover::_listen(int port) {
   _server_addr.sin_port = htons(port);
   _server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  // Bind the socket
-  if (bind(_socket_fd, (struct sockaddr*)&_server_addr, sizeof(_server_addr)) == -1) {
-    _logger->error("Failed binding socket");
+  // Bind the server socket
+  if (bind(_server_socket_fd, (struct sockaddr*)&_server_addr, sizeof(_server_addr)) == -1) {
+    _logger->error("Failed binding server socket");
+    _shutdown();
+    return false;
+  }
+
+  // Create a sending socket
+  _client_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (_client_socket_fd == -1) {
+    _logger->error("Failed creating send socket");
+    return false;
+  }
+
+  int broadcastEnable = 1;
+  if (setsockopt(_client_socket_fd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable)) == -1) {
+    _logger->error("Failed setting send socket options");
     _shutdown();
     return false;
   }
@@ -82,19 +98,60 @@ void LocalDiscover::_main_loop() {
 
   _running = true;
 
-  while (_running) {
-    ssize_t len = _receive((char*)(&buffer), 65536, from_addr);
+  if (!_listen(KAPUA_PORT)) {
+    _logger->error("Listen failed");
+    _shutdown();
+    return;
+  }
 
+  auto last_time_called = std::chrono::steady_clock::now() - std::chrono::hours(24);
+
+  while (_running) {
+    // Do a recieve
+    ssize_t len = _receive((char*)(&buffer), 65536, from_addr);
     if (len > -1) {
       _logger->debug("Packet From " + std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port)) + ", " +
                      std::to_string(len) + " bytes.");
+    }
+
+    // Do a send if time
+    auto now = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - last_time_called);
+
+    if (duration.count() >= 5) {
+      _broadcast();
+
+      // Reset the last_time_called variable
+      last_time_called = now;
     }
   }
 
   _logger->debug("Stopping...");
   _shutdown();
 
-  _logger->info("Stopped");
+  _logger->debug("Stopped");
+}
+
+void LocalDiscover::_broadcast() {
+  Packet* pkt = static_cast<Packet*>(calloc(512, 1));
+
+  pkt->from_id = 0xFFFFFFFF12345678;
+  pkt->to_id = KAPUA_ID_BROADCAST;
+  pkt->length = 0;
+
+  struct sockaddr_in broadcast_addr;
+  std::memset(&broadcast_addr, 0, sizeof(broadcast_addr));
+  broadcast_addr.sin_family = AF_INET;
+  broadcast_addr.sin_port = htons(KAPUA_PORT);  // Specify the port you want to use for broadcasting
+  broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+
+  _logger->debug("Discovery broadcast");
+  ssize_t res = _send((char*)pkt, sizeof(Packet), broadcast_addr);
+  if (res == -1) {
+    _logger->error("Discovery broadcast error " + std::string(strerror(errno)));
+  }
+
+  free(pkt);
 }
 
 ssize_t LocalDiscover::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
@@ -104,31 +161,43 @@ ssize_t LocalDiscover::_receive(char* buffer, size_t buffer_size, sockaddr_in& c
 
   fd_set rfds;
   FD_ZERO(&rfds);
-  FD_SET(_socket_fd, &rfds);
-  int recVal = select(_socket_fd + 1, &rfds, NULL, NULL, &tv);
+  FD_SET(_server_socket_fd, &rfds);
+  int recVal = select(_server_socket_fd + 1, &rfds, NULL, NULL, &tv);
 
   if (recVal > 0) {
     socklen_t client_len = sizeof(client_addr);
-    return recvfrom(_socket_fd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &client_len);
+    return recvfrom(_server_socket_fd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &client_len);
   } else {
     return -1;
   }
 }
 
 ssize_t LocalDiscover::_send(const char* buffer, size_t len, const sockaddr_in& client_addr) {
-  return sendto(_socket_fd, buffer, len, 0, (const struct sockaddr*)&client_addr, sizeof(client_addr));
+  return sendto(_client_socket_fd, buffer, len, 0, (const struct sockaddr*)&client_addr, sizeof(client_addr));
 }
 
 bool LocalDiscover::_shutdown() {
-  if (_socket_fd != -1) {
+  if (_server_socket_fd != -1) {
 #ifdef _WIN32
-    closesocket(_socket_fd);
-    WSACleanup();
+    closesocket(_server_socket_fd);
 #else
-    close(_socket_fd);
+    close(_server_socket_fd);
 #endif
-    _socket_fd = -1;
+    _server_socket_fd = -1;
   }
+
+  if (_client_socket_fd != -1) {
+#ifdef _WIN32
+    closesocket(_client_socket_fd);
+#else
+    close(_client_socket_fd);
+#endif
+    _client_socket_fd = -1;
+  }
+
+#ifdef _WIN32
+  WSACleanup();
+#endif
 
   return true;
 }
