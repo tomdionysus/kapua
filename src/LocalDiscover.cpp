@@ -73,8 +73,9 @@ bool LocalDiscover::_listen(int port) {
     return false;
   }
 
-  int broadcastEnable = 1;
-  if (setsockopt(_client_socket_fd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable)) == -1) {
+  // Set broadcast enabled on sending socket
+  int broadcast_enable = 1;
+  if (setsockopt(_client_socket_fd, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) == -1) {
     _logger->error("Failed setting send socket options");
     _shutdown();
     return false;
@@ -96,33 +97,39 @@ void LocalDiscover::_main_loop() {
   char buffer[65536];
   sockaddr_in from_addr;
 
+  // Set state _running true
   _running = true;
 
+  // Set up listening on the server port
   if (!_listen(KAPUA_PORT)) {
     _logger->error("Listen failed");
     _shutdown();
     return;
   }
 
-  auto last_time_called = std::chrono::steady_clock::now() - std::chrono::hours(24);
+  // Set this in the past so we immediately do a broadcast
+  auto last_broadcast_time = std::chrono::steady_clock::now() - std::chrono::hours(24);
 
   while (_running) {
-    // Do a recieve
+    // Receive if any
     ssize_t len = _receive((char*)(&buffer), 65536, from_addr);
-    if (len > -1) {
+    if (len < 0 ) {
+      _logger->error("Server receive error: " + std::string(strerror(errno)));
+    } else if (len > 0) {
       _logger->debug("Packet From " + std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port)) + ", " +
                      std::to_string(len) + " bytes.");
     }
 
-    // Do a send if time
+    // Get timing
     auto now = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - last_time_called);
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - last_broadcast_time);
 
     if (duration.count() >= 5) {
+      // Do the discovery broadcast
       _broadcast();
 
-      // Reset the last_time_called variable
-      last_time_called = now;
+      // Reset the last_broadcast_time variable
+      last_broadcast_time = now;
     }
   }
 
@@ -135,40 +142,44 @@ void LocalDiscover::_main_loop() {
 void LocalDiscover::_broadcast() {
   Packet* pkt = static_cast<Packet*>(calloc(512, 1));
 
+  // TODO: Replace with our unique ID
   pkt->from_id = 0xFFFFFFFF12345678;
   pkt->to_id = KAPUA_ID_BROADCAST;
   pkt->length = 0;
 
+  // The broadcast address
   struct sockaddr_in broadcast_addr;
   std::memset(&broadcast_addr, 0, sizeof(broadcast_addr));
   broadcast_addr.sin_family = AF_INET;
-  broadcast_addr.sin_port = htons(KAPUA_PORT);  // Specify the port you want to use for broadcasting
+  broadcast_addr.sin_port = htons(KAPUA_PORT); 
   broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
+  // Do the send
   _logger->debug("Discovery broadcast");
   ssize_t res = _send((char*)pkt, sizeof(Packet), broadcast_addr);
   if (res == -1) {
-    _logger->error("Discovery broadcast error " + std::string(strerror(errno)));
+    _logger->error("Discovery broadcast error: " + std::string(strerror(errno)));
   }
 
   free(pkt);
 }
 
 ssize_t LocalDiscover::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
+  // Do a select to see if there is a packet waiting
   struct timeval tv;
   tv.tv_sec = 1;
   tv.tv_usec = 0;
-
   fd_set rfds;
   FD_ZERO(&rfds);
   FD_SET(_server_socket_fd, &rfds);
   int recVal = select(_server_socket_fd + 1, &rfds, NULL, NULL, &tv);
 
+  // If there is, get the packet and return
   if (recVal > 0) {
     socklen_t client_len = sizeof(client_addr);
     return recvfrom(_server_socket_fd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &client_len);
   } else {
-    return -1;
+    return 0;
   }
 }
 
@@ -177,6 +188,7 @@ ssize_t LocalDiscover::_send(const char* buffer, size_t len, const sockaddr_in& 
 }
 
 bool LocalDiscover::_shutdown() {
+  // Close the server socket
   if (_server_socket_fd != -1) {
 #ifdef _WIN32
     closesocket(_server_socket_fd);
@@ -186,6 +198,7 @@ bool LocalDiscover::_shutdown() {
     _server_socket_fd = -1;
   }
 
+  // Close the client socket
   if (_client_socket_fd != -1) {
 #ifdef _WIN32
     closesocket(_client_socket_fd);
@@ -196,6 +209,7 @@ bool LocalDiscover::_shutdown() {
   }
 
 #ifdef _WIN32
+  // Cleanup if Windows
   WSACleanup();
 #endif
 
