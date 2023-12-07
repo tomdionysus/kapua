@@ -12,7 +12,6 @@
 using namespace std;
 
 Kapua::IOStreamLogger* stdlog;
-Kapua::ScopedLogger* logger;
 Kapua::Config* config;
 Kapua::Core* core;
 Kapua::LocalDiscover* local_discover;
@@ -21,23 +20,22 @@ volatile bool running = true;
 volatile bool stopping = false;
 
 void signal_stop(int signum) {
-  logger->info("SIGINT Recieved");
+  stdlog->info("SIGINT Recieved");
   if (!stopping) {
     running = false;
     stopping = true;
 
   } else {
-    logger->warn("Hard shutdown!");
+    stdlog->warn("Hard shutdown!");
     exit(1);
   }
 }
 
 void start() {
   stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
-  logger = new Kapua::ScopedLogger("Core", stdlog);
-  config = new Kapua::Config(logger, "config.yaml");
-  core = new Kapua::Core(logger, config);
-  local_discover = new Kapua::LocalDiscover(logger);
+  config = new Kapua::Config(stdlog, "config.yaml");
+  core = new Kapua::Core(stdlog, config);
+  local_discover = new Kapua::LocalDiscover(stdlog, core);
 
   local_discover->start(KAPUA_PORT);
 }
@@ -52,7 +50,6 @@ void stop() {
 
 int main() {
   stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
-  logger = new Kapua::ScopedLogger("Core", stdlog);
 
   stdlog->debug("Starting...");
   start();
@@ -68,7 +65,6 @@ int main() {
   stop();
   stdlog->info("Stopped");
 
-  delete logger;
   delete stdlog;
 
   return EXIT_SUCCESS;

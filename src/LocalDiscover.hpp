@@ -11,6 +11,8 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <iomanip>
+#include <sstream>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -22,11 +24,12 @@
 #endif
 
 #include "Logger.hpp"
+#include "Core.hpp"
 
 namespace Kapua {
 class LocalDiscover {
  public:
-  LocalDiscover(Logger* logger);
+  LocalDiscover(Logger* logger, Core* core);
   ~LocalDiscover();
 
   bool start(int port);
@@ -39,6 +42,8 @@ class LocalDiscover {
   ssize_t _receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr);
   ssize_t _send(const char* buffer, size_t len, const sockaddr_in& client_addr);
   bool _shutdown();
+
+  Core *_core;
 
   int _server_socket_fd;
   int _client_socket_fd;

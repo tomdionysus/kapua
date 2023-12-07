@@ -10,9 +10,10 @@
 
 namespace Kapua {
 
-LocalDiscover::LocalDiscover(Logger* logger) {
+LocalDiscover::LocalDiscover(Logger* logger, Core* core) {
   _logger = new ScopedLogger("LocalDiscover", logger);
-  _running = false;
+  _core = core;
+_running= false;
 }
 
 LocalDiscover::~LocalDiscover() {
@@ -47,6 +48,16 @@ bool LocalDiscover::stop() {
 }
 
 bool LocalDiscover::_listen(int port) {
+
+#ifdef _WIN32
+  // Initialize Windows Socket API (Winsock)
+  if (WSAStartup(MAKEWORD(2, 2), &_wsaData) != 0) {
+    _logger->error("WIN32: Failed to initialize Winsock");
+    _shutdown();
+    return false;
+  }
+#endif
+
   // Create a server socket
   _server_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (_server_socket_fd == -1) {
@@ -76,19 +87,10 @@ bool LocalDiscover::_listen(int port) {
   // Set broadcast enabled on sending socket
   int broadcast_enable = 1;
   if (setsockopt(_client_socket_fd, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) == -1) {
-    _logger->error("Failed setting send socket options");
+    _logger->error("Failed setting send socket options (SO_BROADCAST)");
     _shutdown();
     return false;
   }
-
-#ifdef _WIN32
-  // initialize Windows Socket API (Winsock)
-  if (WSAStartup(MAKEWORD(2, 2), &_wsaData) != 0) {
-    _logger->error("WIN32: Failed to initialize Winsock");
-    _shutdown();
-    return false;
-  }
-#endif
 
   return true;
 }
@@ -116,8 +118,27 @@ void LocalDiscover::_main_loop() {
     if (len < 0 ) {
       _logger->error("Server receive error: " + std::string(strerror(errno)));
     } else if (len > 0) {
-      _logger->debug("Packet From " + std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port)) + ", " +
-                     std::to_string(len) + " bytes.");
+      std::string from_addr_str = std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port));
+      _logger->debug("Packet From " + from_addr_str + ", " +  std::to_string(len) + " bytes.");
+
+      // Verify the packet
+      if(len<32) {
+        // Length First
+        _logger->debug("Non-Kapua packet received (too short)");
+      } else {
+        // Has magic Number
+        Packet *pk = (Packet*)buffer;
+        if(pk->magic != KAPUA_MAGIC_NUMBER) {
+          _logger->debug("Non-Kapua packet received (bad magic number)");
+        // Isn't from us
+        } else if(pk->from_id == _core->get_my_id()) {
+            _logger->debug("Packet received from own id");
+        } else {
+            // TODO: Check if registered, register new ID
+          std::string from_id_hex = [&] { std::ostringstream oss; oss << "0x" << std::setfill('0') << std::setw(16) << std::hex << pk->from_id; return oss.str(); }();
+            _logger->info("New node detected, ID: " + from_id_hex + " ("+from_addr_str+")");
+        }
+      }
     }
 
     // Get timing
@@ -142,8 +163,9 @@ void LocalDiscover::_main_loop() {
 void LocalDiscover::_broadcast() {
   Packet* pkt = static_cast<Packet*>(calloc(512, 1));
 
+  pkt->magic = KAPUA_MAGIC_NUMBER;
   // TODO: Replace with our unique ID
-  pkt->from_id = 0xFFFFFFFF12345678;
+  pkt->from_id = _core->get_my_id();
   pkt->to_id = KAPUA_ID_BROADCAST;
   pkt->length = 0;
 
