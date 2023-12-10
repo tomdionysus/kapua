@@ -28,6 +28,10 @@ find_package(LIBYAML REQUIRED)
 include_directories(${LIBYAML_INCLUDE_DIR})
 target_link_libraries(kapua ${LIBYAML_LIBRARIES})
 
+find_package(CURL REQUIRED) 
+include_directories(${CURL_INCLUDE_DIR})
+target_link_libraries(kapua ${CURL_LIBRARIES})
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

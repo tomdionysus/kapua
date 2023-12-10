@@ -26,6 +26,7 @@ class YamlNode {
   enum NodeType { SCALAR, MAPPING, SEQUENCE };
 
   NodeType type;
+  std::string anchor;
   std::string key;
   std::string value;  // Only valid if type == SCALAR
   std::vector<YamlNode*> children;

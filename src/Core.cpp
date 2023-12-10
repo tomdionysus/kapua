@@ -15,7 +15,6 @@ Core ::Core(Logger* logger, Config* config) {
   _logger  = new Kapua::ScopedLogger("Core", logger);
   _config = config;
   _logger->debug("Starting...");
-  _logger->debug("Loading config...");
   _config->load();
 
   _my_id = _get_random_id();

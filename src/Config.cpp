@@ -2,7 +2,7 @@
 // Kapua Config class
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
 #include "Config.hpp"
 
@@ -39,10 +39,12 @@ int Config::load() {
     return 1;
   }
 
+
   // Initialize libyaml parser
   yaml_parser_t parser;
   yaml_parser_initialize(&parser);
   yaml_parser_set_input_file(&parser, file);
+  
 
   _logger->debug("Parsing config file");
   parse_yaml_document(&parser, _yaml_root);
@@ -79,19 +81,23 @@ void Config::print_yaml_node(YamlNode* node, int level) {
       std::cout << "SEQUENCE, ";
       break;
   }
+  std::cout << "Anchor: " << node->anchor << ", ";
   std::cout << node->key << ": " << node->value << std::endl;
   for (YamlNode* child : node->children) {
     print_yaml_node(child, level + 1);
   }
 }
 
-ParserStatus Config::parse_yaml_document(yaml_parser_t* parser, YamlNode* node) {
+ParserStatus Config::parse_yaml_document(yaml_parser_t* parser,
+                                         YamlNode* node) {
   yaml_event_t event;
   ParserStatus status;
 
   bool loop = true;
   while (loop) {
     if (!yaml_parser_parse(parser, &event)) return ParserStatus::ERROR;
+
+    // _logger->debug("Document YAML Event "+std::to_string(event.type));
 
     switch (event.type) {
       // Something has gone wrong
@@ -123,7 +129,8 @@ ParserStatus Config::parse_yaml_document(yaml_parser_t* parser, YamlNode* node) 
         break;
 
       default:
-        _logger->error("YAML Parser - Unknown Event Type " + std::to_string(event.type));
+        _logger->error("YAML Parser - Unknown Event Type " +
+                       std::to_string(event.type));
         return ParserStatus::ERROR;
     }
   }
@@ -131,13 +138,16 @@ ParserStatus Config::parse_yaml_document(yaml_parser_t* parser, YamlNode* node) 
   return ParserStatus::ERROR;
 }
 
-ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser, YamlNode* parent) {
+ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser,
+                                        YamlNode* parent) {
   yaml_event_t event;
   ParserStatus status;
   YamlNode* node;
 
   while (true) {
     if (!yaml_parser_parse(parser, &event)) return ParserStatus::ERROR;
+
+    // _logger->debug("Mapping YAML Event "+std::to_string(event.type));
 
     switch (event.type) {
       // We found the end of the sequence
@@ -157,13 +167,15 @@ ParserStatus Config::parse_yaml_mapping(yaml_parser_t* parser, YamlNode* parent)
         break;
 
       default:
-        _logger->error("YAML Parser - Unknown Event Type " + std::to_string(event.type));
+        _logger->error("YAML Parser - Unknown Event Type " +
+                       std::to_string(event.type));
         return ParserStatus::ERROR;
     }
   }
 }
 
-ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser, YamlNode* parent) {
+ParserStatus Config::parse_yaml_sequence(yaml_parser_t* parser,
+                                         YamlNode* parent) {
   yaml_event_t event;
 
   YamlNode* node;
@@ -188,6 +200,8 @@ ParserStatus Config::parse_yaml_value(yaml_parser_t* parser, YamlNode* node) {
   YamlNode* childnode;
 
   if (!yaml_parser_parse(parser, &event)) return ParserStatus::ERROR;
+
+// _logger->debug("Value YAML Event "+std::to_string(event.type));
 
   switch (event.type) {
     // Start of a key/value map
@@ -223,7 +237,8 @@ ParserStatus Config::parse_yaml_value(yaml_parser_t* parser, YamlNode* node) {
       return ParserStatus::ERROR;
 
     default:
-      _logger->error("YAML Parser - Unknown Event Type " + std::to_string(event.type));
+      _logger->error("YAML Parser - Unknown Event Type " +
+                     std::to_string(event.type));
       return ParserStatus::ERROR;
   }
 }
