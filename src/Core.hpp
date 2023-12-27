@@ -45,6 +45,8 @@ class Core {
 
   uint64_t _my_id;
 
+  std::string _config_filename;
+
   std::unordered_map<uint64_t, Node*> _nodes;
   std::mutex _nodes_mutex;
 

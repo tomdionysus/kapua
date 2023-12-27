@@ -173,7 +173,7 @@ void UDPNetwork::_main_loop() {
 }
 
 void UDPNetwork::_broadcast() {
-  std::unique_ptr<Packet> pkt = std::unique_ptr<Packet>(new Packet());
+  auto pkt = std::unique_ptr<Packet>(new Packet());
 
   pkt->from_id = _core->get_my_id();
   pkt->to_id = KAPUA_ID_BROADCAST;
@@ -198,8 +198,8 @@ void UDPNetwork::_broadcast() {
 ssize_t UDPNetwork::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
   // Do a select to see if there is a packet waiting
   struct timeval tv;
-  tv.tv_sec = 1;
-  tv.tv_usec = 0;
+  tv.tv_sec = 0;
+  tv.tv_usec = 100;
   fd_set rfds;
   FD_ZERO(&rfds);
   FD_SET(_server_socket_fd, &rfds);

@@ -13,6 +13,7 @@ using namespace std;
 namespace Kapua {
 Core ::Core(Logger* logger, Config* config) {
   _logger = new Kapua::ScopedLogger("Core", logger);
+
   _config = config;
   _logger->debug("Starting...");
   _config->load();

@@ -18,6 +18,7 @@ add_library(
 
 	src/Config.cpp
 	src/Logger.cpp
+	src/Settings.cpp
 	src/Node.cpp
 	src/Protocol.cpp
 	src/Core.cpp
