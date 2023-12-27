@@ -125,12 +125,21 @@ void UDPNetwork::_main_loop() {
         // Length First
         _logger->debug("Non-Kapua packet received (too short)");
       } else {
-        // Has magic Number
+        // Valid magic Number?
         Packet* pk = (Packet*)buffer;
-        if (pk->magic != KAPUA_MAGIC_NUMBER) {
-          _logger->debug("Non-Kapua packet received (bad magic number)");
-          // Isn't from us
+        if (!pk->isMagicValid()) {
+          std::string bad_magic = [&] {
+            std::ostringstream oss;
+            oss << "0x" << std::setfill('0') << std::setw(10) << std::hex << pk->magic;
+            return oss.str();
+          }();
+          _logger->debug("Non-Kapua packet received (bad magic number "+bad_magic+")");
+        } else if (!pk->isVersionValid()) {
+          // TODO: Setting for strict version checking
+          // Version
+          _logger->debug("Packet received with incompatible version ("+pk->getVersionString()+")");
         } else if (pk->from_id == _core->get_my_id()) {
+          // Is from us?
           _logger->debug("Packet received from own id");
         } else {
           // TODO: Check if registered, register new ID
@@ -164,10 +173,8 @@ void UDPNetwork::_main_loop() {
 }
 
 void UDPNetwork::_broadcast() {
-  Packet* pkt = static_cast<Packet*>(calloc(512, 1));
+  std::unique_ptr<Packet> pkt = std::unique_ptr<Packet>(new Packet());
 
-  pkt->magic = KAPUA_MAGIC_NUMBER;
-  // TODO: Replace with our unique ID
   pkt->from_id = _core->get_my_id();
   pkt->to_id = KAPUA_ID_BROADCAST;
   pkt->length = 0;
@@ -181,12 +188,11 @@ void UDPNetwork::_broadcast() {
 
   // Do the send
   _logger->debug("Discovery broadcast");
-  ssize_t res = _send((char*)pkt, sizeof(Packet), broadcast_addr);
+  ssize_t res = _send(reinterpret_cast<char*>(pkt.get()), sizeof(Packet), broadcast_addr);
+
   if (res == -1) {
     _logger->error("Discovery broadcast error: " + std::string(strerror(errno)));
   }
-
-  free(pkt);
 }
 
 ssize_t UDPNetwork::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
