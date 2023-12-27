@@ -2,7 +2,7 @@
 // Kapua Protocol classes
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
 #pragma once
 
@@ -37,6 +37,7 @@ struct Packet {
 
   std::uint32_t magic = KAPUA_MAGIC_NUMBER;
   PacketType type;
+  std::uint64_t packet_id;
   std::uint64_t from_id;
   std::uint64_t to_id;
   std::uint16_t ttl = 32;

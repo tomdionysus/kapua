@@ -2,7 +2,7 @@
 // Kapua Logger classes
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
 #include "Logger.hpp"
 

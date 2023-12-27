@@ -5,7 +5,7 @@
 #include <thread>
 
 #include "Core.hpp"
-#include "LocalDiscover.hpp"
+#include "UDPNetwork.hpp"
 #include "Logger.hpp"
 #include "Protocol.hpp"
 
@@ -14,7 +14,7 @@ using namespace std;
 Kapua::IOStreamLogger* stdlog;
 Kapua::Config* config;
 Kapua::Core* core;
-Kapua::LocalDiscover* local_discover;
+Kapua::UDPNetwork* local_discover;
 
 volatile bool running = true;
 volatile bool stopping = false;
@@ -35,7 +35,7 @@ void start() {
   stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
   config = new Kapua::Config(stdlog, "config.yaml");
   core = new Kapua::Core(stdlog, config);
-  local_discover = new Kapua::LocalDiscover(stdlog, core);
+  local_discover = new Kapua::UDPNetwork(stdlog, core);
 
   local_discover->start(KAPUA_PORT);
 }

@@ -2,7 +2,7 @@
 // Kapua Node class
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
 #include "Node.hpp"
 

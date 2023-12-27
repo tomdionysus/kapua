@@ -1,2 +1,0 @@
-#!/bin/sh
-clang-format -i src/*.hpp src/*.cpp examples/kapua_link/*.cpp

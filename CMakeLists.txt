@@ -21,7 +21,8 @@ add_library(
 	src/Node.cpp
 	src/Protocol.cpp
 	src/Core.cpp
-	src/LocalDiscover.cpp
+	src/UDPNetwork.cpp
+	src/DistributedBlockStore.cpp
 )
 
 find_package(LIBYAML REQUIRED)

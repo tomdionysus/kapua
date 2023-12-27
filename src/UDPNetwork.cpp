@@ -1,38 +1,38 @@
 //
-// Kapua LocalDiscover class
+// Kapua UDPNetwork class
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
-#include "LocalDiscover.hpp"
+#include "UDPNetwork.hpp"
 
 #include "Protocol.hpp"
 
 namespace Kapua {
 
-LocalDiscover::LocalDiscover(Logger* logger, Core* core) {
-  _logger = new ScopedLogger("LocalDiscover", logger);
+UDPNetwork::UDPNetwork(Logger* logger, Core* core) {
+  _logger = new ScopedLogger("UDPNetwork", logger);
   _core = core;
-_running= false;
+  _running = false;
 }
 
-LocalDiscover::~LocalDiscover() {
+UDPNetwork::~UDPNetwork() {
   if (_running) stop();
   delete _logger;
 }
 
-bool LocalDiscover::start(int port) {
+bool UDPNetwork::start(int port) {
   _logger->debug("Starting...");
   if (_running) {
     _logger->warn("start called, but thread already running");
     return false;
   }
 
-  _main_thread = new std::thread(&LocalDiscover::_main_loop, this);
+  _main_thread = new std::thread(&UDPNetwork::_main_loop, this);
   return true;
 }
 
-bool LocalDiscover::stop() {
+bool UDPNetwork::stop() {
   if (!_running) {
     _logger->warn("stop called, but thread not running");
     return false;
@@ -47,8 +47,7 @@ bool LocalDiscover::stop() {
   return true;
 }
 
-bool LocalDiscover::_listen(int port) {
-
+bool UDPNetwork::_listen(int port) {
 #ifdef _WIN32
   // Initialize Windows Socket API (Winsock)
   if (WSAStartup(MAKEWORD(2, 2), &_wsaData) != 0) {
@@ -95,7 +94,7 @@ bool LocalDiscover::_listen(int port) {
   return true;
 }
 
-void LocalDiscover::_main_loop() {
+void UDPNetwork::_main_loop() {
   char buffer[65536];
   sockaddr_in from_addr;
 
@@ -115,28 +114,32 @@ void LocalDiscover::_main_loop() {
   while (_running) {
     // Receive if any
     ssize_t len = _receive((char*)(&buffer), 65536, from_addr);
-    if (len < 0 ) {
+    if (len < 0) {
       _logger->error("Server receive error: " + std::string(strerror(errno)));
     } else if (len > 0) {
       std::string from_addr_str = std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port));
-      _logger->debug("Packet From " + from_addr_str + ", " +  std::to_string(len) + " bytes.");
+      _logger->debug("Packet From " + from_addr_str + ", " + std::to_string(len) + " bytes.");
 
       // Verify the packet
-      if(len<32) {
+      if (len < 32) {
         // Length First
         _logger->debug("Non-Kapua packet received (too short)");
       } else {
         // Has magic Number
-        Packet *pk = (Packet*)buffer;
-        if(pk->magic != KAPUA_MAGIC_NUMBER) {
+        Packet* pk = (Packet*)buffer;
+        if (pk->magic != KAPUA_MAGIC_NUMBER) {
           _logger->debug("Non-Kapua packet received (bad magic number)");
-        // Isn't from us
-        } else if(pk->from_id == _core->get_my_id()) {
-            _logger->debug("Packet received from own id");
+          // Isn't from us
+        } else if (pk->from_id == _core->get_my_id()) {
+          _logger->debug("Packet received from own id");
         } else {
-            // TODO: Check if registered, register new ID
-          std::string from_id_hex = [&] { std::ostringstream oss; oss << "0x" << std::setfill('0') << std::setw(16) << std::hex << pk->from_id; return oss.str(); }();
-            _logger->info("New node detected, ID: " + from_id_hex + " ("+from_addr_str+")");
+          // TODO: Check if registered, register new ID
+          std::string from_id_hex = [&] {
+            std::ostringstream oss;
+            oss << "0x" << std::setfill('0') << std::setw(16) << std::hex << pk->from_id;
+            return oss.str();
+          }();
+          _logger->info("New node detected, ID: " + from_id_hex + " (" + from_addr_str + ")");
         }
       }
     }
@@ -160,7 +163,7 @@ void LocalDiscover::_main_loop() {
   _logger->debug("Stopped");
 }
 
-void LocalDiscover::_broadcast() {
+void UDPNetwork::_broadcast() {
   Packet* pkt = static_cast<Packet*>(calloc(512, 1));
 
   pkt->magic = KAPUA_MAGIC_NUMBER;
@@ -173,7 +176,7 @@ void LocalDiscover::_broadcast() {
   struct sockaddr_in broadcast_addr;
   std::memset(&broadcast_addr, 0, sizeof(broadcast_addr));
   broadcast_addr.sin_family = AF_INET;
-  broadcast_addr.sin_port = htons(KAPUA_PORT); 
+  broadcast_addr.sin_port = htons(KAPUA_PORT);
   broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
   // Do the send
@@ -186,7 +189,7 @@ void LocalDiscover::_broadcast() {
   free(pkt);
 }
 
-ssize_t LocalDiscover::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
+ssize_t UDPNetwork::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
   // Do a select to see if there is a packet waiting
   struct timeval tv;
   tv.tv_sec = 1;
@@ -205,11 +208,11 @@ ssize_t LocalDiscover::_receive(char* buffer, size_t buffer_size, sockaddr_in& c
   }
 }
 
-ssize_t LocalDiscover::_send(const char* buffer, size_t len, const sockaddr_in& client_addr) {
+ssize_t UDPNetwork::_send(const char* buffer, size_t len, const sockaddr_in& client_addr) {
   return sendto(_client_socket_fd, buffer, len, 0, (const struct sockaddr*)&client_addr, sizeof(client_addr));
 }
 
-bool LocalDiscover::_shutdown() {
+bool UDPNetwork::_shutdown() {
   // Close the server socket
   if (_server_socket_fd != -1) {
 #ifdef _WIN32

@@ -2,7 +2,7 @@
 // Kapua Core class
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
 #pragma once
 
@@ -11,14 +11,13 @@
 #define KAPUA_VERSION_PATCH 1
 
 #include <mutex>
+#include <random>
 #include <unordered_map>
 #include <vector>
-#include <random>
 
 #include "Config.hpp"
 #include "Logger.hpp"
 #include "Node.hpp"
-#include "Logger.hpp"
 
 namespace Kapua {
 

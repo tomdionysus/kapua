@@ -2,7 +2,7 @@
 // Kapua Core class
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
 #include "Core.hpp"
 
@@ -12,7 +12,7 @@ using namespace std;
 
 namespace Kapua {
 Core ::Core(Logger* logger, Config* config) {
-  _logger  = new Kapua::ScopedLogger("Core", logger);
+  _logger = new Kapua::ScopedLogger("Core", logger);
   _config = config;
   _logger->debug("Starting...");
   _config->load();
@@ -41,16 +41,14 @@ Node* Core::find_node(uint64_t id) {
   return nullptr;
 }
 
-uint64_t Core:: get_my_id() {
-  return _my_id;
-}
+uint64_t Core::get_my_id() { return _my_id; }
 
-uint64_t Core:: _get_random_id() {
+uint64_t Core::_get_random_id() {
   std::random_device rd;
-    std::default_random_engine generator(rd());
-    std::uniform_int_distribution<uint64_t> distribution(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max());
-    return distribution(generator);
-  }
+  std::default_random_engine generator(rd());
+  std::uniform_int_distribution<uint64_t> distribution(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max());
+  return distribution(generator);
+}
 
 void get_version(Version_t* version) {
   version->major = KAPUA_VERSION_MAJOR;

@@ -1,18 +1,18 @@
 //
-// Kapua LocalDiscover class
+// Kapua UDPNetwork class
 //
 // Author: Tom Cully <mail@tomcully.com>
-// Copyright (c) Tom Cully 2023 
+// Copyright (c) Tom Cully 2023
 //
 #pragma once
 
 #include <cstring>
+#include <iomanip>
 #include <iostream>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
-#include <iomanip>
-#include <sstream>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -23,14 +23,14 @@
 #include <unistd.h>
 #endif
 
-#include "Logger.hpp"
 #include "Core.hpp"
+#include "Logger.hpp"
 
 namespace Kapua {
-class LocalDiscover {
+class UDPNetwork {
  public:
-  LocalDiscover(Logger* logger, Core* core);
-  ~LocalDiscover();
+  UDPNetwork(Logger* logger, Core* core);
+  ~UDPNetwork();
 
   bool start(int port);
   bool stop();
@@ -43,7 +43,7 @@ class LocalDiscover {
   ssize_t _send(const char* buffer, size_t len, const sockaddr_in& client_addr);
   bool _shutdown();
 
-  Core *_core;
+  Core* _core;
 
   int _server_socket_fd;
   int _client_socket_fd;
