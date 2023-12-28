@@ -19,7 +19,7 @@ apt-get install cmake curl libyaml
 **MacOS**
 
 ```sh
-brew install curl libyaml
+brew install curl yaml-cpp
 ```
 
 ### Build
