@@ -133,11 +133,11 @@ void UDPNetwork::_main_loop() {
             oss << "0x" << std::setfill('0') << std::setw(10) << std::hex << pk->magic;
             return oss.str();
           }();
-          _logger->debug("Non-Kapua packet received (bad magic number "+bad_magic+")");
+          _logger->debug("Non-Kapua packet received (bad magic number " + bad_magic + ")");
         } else if (!pk->isVersionValid()) {
           // TODO: Setting for strict version checking
           // Version
-          _logger->debug("Packet received with incompatible version ("+pk->getVersionString()+")");
+          _logger->debug("Packet received with incompatible version (" + pk->getVersionString() + ")");
         } else if (pk->from_id == _core->get_my_id()) {
           // Is from us?
           _logger->debug("Packet received from own id");

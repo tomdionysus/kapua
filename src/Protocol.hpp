@@ -54,22 +54,18 @@ struct Packet {
     } peer_list;
   };
 
-  Packet() { 
+  Packet() {
     std::memcpy(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size());
     version = KAPUA_VERSION;
   }
 
   bool isMagicValid() { return std::memcmp(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size()) == 0; }
   bool isVersionValid(bool strict = false) {
-    if(version.major != KAPUA_VERSION.major) return false;
-    if(strict && version.minor > KAPUA_VERSION.minor) return false;
+    if (version.major != KAPUA_VERSION.major) return false;
+    if (strict && version.minor > KAPUA_VERSION.minor) return false;
     return true;
   }
-  std::string getVersionString() {
-    return std::to_string(version.major) + "." + 
-           std::to_string(version.minor) + "." + 
-           std::to_string(version.patch);
-  }
+  std::string getVersionString() { return std::to_string(version.major) + "." + std::to_string(version.minor) + "." + std::to_string(version.patch); }
 };
 
 }  // namespace Kapua

@@ -7,8 +7,8 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
 #include <map>
+#include <vector>
 
 #include "Logger.hpp"
 
