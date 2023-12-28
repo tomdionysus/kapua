@@ -32,6 +32,8 @@ class Core {
   Core(Logger* logger, Config* config);
   ~Core();
 
+  bool start();
+
   void add_node(uint64_t id, Node* node);
   void remove_node(uint64_t id);
   Node* find_node(uint64_t id);

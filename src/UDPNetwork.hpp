@@ -24,6 +24,7 @@
 #endif
 
 #include "Core.hpp"
+#include "Kapua.hpp"
 #include "Logger.hpp"
 
 namespace Kapua {
@@ -44,6 +45,8 @@ class UDPNetwork {
   bool _shutdown();
 
   Core* _core;
+
+  uint16_t _port;
 
   int _server_socket_fd;
   int _client_socket_fd;

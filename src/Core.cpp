@@ -15,15 +15,22 @@ Core ::Core(Logger* logger, Config* config) {
   _logger = new Kapua::ScopedLogger("Core", logger);
 
   _config = config;
+}
+
+Core ::~Core() { _logger->debug("Stopped"); }
+
+bool Core::start() {
   _logger->debug("Starting...");
-  _config->load();
+  if (!_config->load()) {
+    _logger->error("Cannot load config");
+    return false;
+  };
 
   _my_id = _get_random_id();
 
   _logger->debug("Started");
+  return true;
 }
-
-Core ::~Core() { _logger->debug("Stopped"); }
 
 void Core::add_node(uint64_t id, Node* node) {
   std::lock_guard<std::mutex> lock(_nodes_mutex);

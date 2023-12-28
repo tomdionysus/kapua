@@ -25,7 +25,6 @@ namespace Kapua {
 
 #define KAPUA_ID_GROUP 0xFFFFFFFFFFFFFF01
 #define KAPUA_ID_BROADCAST 0xFFFFFFFFFFFFFFFF
-#define KAPUA_PORT 11860
 
 typedef struct Peer {
   uint64_t id;

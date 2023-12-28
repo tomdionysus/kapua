@@ -28,6 +28,7 @@ bool UDPNetwork::start(int port) {
     return false;
   }
 
+  _port = port;
   _main_thread = new std::thread(&UDPNetwork::_main_loop, this);
   return true;
 }
@@ -102,7 +103,7 @@ void UDPNetwork::_main_loop() {
   _running = true;
 
   // Set up listening on the server port
-  if (!_listen(KAPUA_PORT)) {
+  if (!_listen(_port)) {
     _logger->error("Listen failed");
     _shutdown();
     return;
@@ -183,7 +184,7 @@ void UDPNetwork::_broadcast() {
   struct sockaddr_in broadcast_addr;
   std::memset(&broadcast_addr, 0, sizeof(broadcast_addr));
   broadcast_addr.sin_family = AF_INET;
-  broadcast_addr.sin_port = htons(KAPUA_PORT);
+  broadcast_addr.sin_port = htons(_port);
   broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
   // Do the send

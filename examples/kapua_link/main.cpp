@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 
+#include "Kapua.hpp"
 #include "Core.hpp"
 #include "UDPNetwork.hpp"
 #include "Logger.hpp"
@@ -31,15 +32,6 @@ void signal_stop(int signum) {
   }
 }
 
-void start() {
-  stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
-  config = new Kapua::Config(stdlog, "config.yaml");
-  core = new Kapua::Core(stdlog, config);
-  local_discover = new Kapua::UDPNetwork(stdlog, core);
-
-  local_discover->start(KAPUA_PORT);
-}
-
 void stop() {
   local_discover->stop();
 
@@ -48,11 +40,31 @@ void stop() {
   delete config;
 }
 
+bool start() {
+  stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
+  config = new Kapua::Config(stdlog, "config.yaml");
+  core = new Kapua::Core(stdlog, config);
+  local_discover = new Kapua::UDPNetwork(stdlog, core);
+
+  if(!core->start()) {
+    stdlog->error("Cannot start core");
+    stop();
+    return false;
+  }
+
+  local_discover->start(ntohs(config->server_address.sin_port));
+  return true;
+}
+
 int main() {
   stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
 
   stdlog->debug("Starting...");
-  start();
+  if(!start()) {
+    stdlog->error("Start failed");
+    delete stdlog;
+    return EXIT_FAILURE;
+  }
   stdlog->info("Started");
 
   signal(SIGINT, signal_stop);
