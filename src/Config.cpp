@@ -8,9 +8,13 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
+
 #include "Logger.hpp"
 
 using namespace std;
+namespace po = boost::program_options;
 
 namespace Kapua {
 
@@ -61,11 +65,51 @@ bool Config::load() {
       server_address.sin_port = htons(port);
     }
 
+    // local_discovery.enable
+    if (config["local_discovery"]["enable"]) {
+      bool enable;
+      if (parse_bool(config["local_discovery"]["enable"].as<std::string>(), &enable) != Config::ParseResult::Success) {
+        _logger->error("local_discovery.enable must be 'true','t','yes','false','f','no'");
+        return false;
+      }
+      local_discovery_enable = enable;
+      _logger->debug("local_discovery.enable = " + std::string(local_discovery_enable ? "true" : "false"));
+    }
+
   } catch (const YAML::BadFile& e) {
     _logger->error("Cannot open file " + _filename + " (" + e.msg + ")");
     return false;
   } catch (const YAML::ParserException& e) {
     _logger->error("Cannot parse file " + _filename + " (" + e.msg + ")");
+    return false;
+  }
+  return true;
+}
+
+bool Config::load_cmd_line(int ac, char** av) {
+  try {
+    po::options_description desc("Kapua v" + KAPUA_VERSION_STRING + "\nOptions:");
+    desc.add_options()("help", "produce help message")("compression", po::value<double>(), "set compression level");
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(ac, av, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("help")) {
+      cout << desc << "\n";
+      return false;
+    }
+
+    if (vm.count("compression")) {
+      cout << "Compression level was set to " << vm["compression"].as<double>() << ".\n";
+    } else {
+      cout << "Compression level was not set.\n";
+    }
+  } catch (exception& e) {
+    cerr << "error: " << e.what() << "\n";
+    return false;
+  } catch (...) {
+    cerr << "Exception of unknown type!\n";
     return false;
   }
   return true;
@@ -173,29 +217,39 @@ Config::ParseResult Config::parse_ipv4(const std::string& input, in_addr* addr) 
   return Config::ParseResult::Success;
 }
 
+Config::ParseResult Config::parse_bool(const std::string& input, bool* result) {
+  std::string parsedInput = input;
+  boost::algorithm::to_lower(parsedInput);
+  if (parsedInput == "true" || parsedInput == "t" || parsedInput == "yes") {
+    *result = true;
+  } else if (parsedInput == "false" || parsedInput == "f" || parsedInput == "no") {
+    *result = false;
+  } else {
+    return ParseResult::InvalidFormat;
+  }
+  return Config::ParseResult::Success;
+}
+
 Config::ParseResult Config::parse_log_level(const std::string& input, LogLevel_t* level) {
-    std::string lowercaseInput = input;
+  std::string lowercaseInput = input;
 
-    // Convert the input string to lowercase
-    for (char& c : lowercaseInput) {
-        c = std::tolower(c);
-    }
+  boost::algorithm::to_lower(lowercaseInput);
 
-    if (lowercaseInput == "error") {
-        *level = LOG_LEVEL_ERROR;
-        return ParseResult::Success;
-    } else if (lowercaseInput == "warn" || lowercaseInput == "warning") {
-        *level = LOG_LEVEL_WARN;
-        return ParseResult::Success;
-    } else if (lowercaseInput == "info") {
-        *level = LOG_LEVEL_INFO;
-        return ParseResult::Success;
-    } else if (lowercaseInput == "debug") {
-        *level = LOG_LEVEL_DEBUG;
-        return ParseResult::Success;
-    } else {
-        return ParseResult::InvalidFormat;
-    }
+  if (lowercaseInput == "error") {
+    *level = LOG_LEVEL_ERROR;
+    return ParseResult::Success;
+  } else if (lowercaseInput == "warn" || lowercaseInput == "warning") {
+    *level = LOG_LEVEL_WARN;
+    return ParseResult::Success;
+  } else if (lowercaseInput == "info") {
+    *level = LOG_LEVEL_INFO;
+    return ParseResult::Success;
+  } else if (lowercaseInput == "debug") {
+    *level = LOG_LEVEL_DEBUG;
+    return ParseResult::Success;
+  } else {
+    return ParseResult::InvalidFormat;
+  }
 }
 
 }  // namespace Kapua

@@ -12,60 +12,48 @@
 
 using namespace std;
 
-Kapua::IOStreamLogger* stdlog;
-Kapua::Config* config;
-Kapua::Core* core;
-Kapua::UDPNetwork* local_discover;
-
 volatile bool running = true;
 volatile bool stopping = false;
 
 void signal_stop(int signum) {
-  stdlog->info("SIGINT Recieved");
   if (!stopping) {
     running = false;
     stopping = true;
 
   } else {
-    stdlog->warn("Hard shutdown!");
     exit(1);
   }
 }
 
-void stop() {
-  local_discover->stop();
+int main(int ac, char** av) {
+  Kapua::IOStreamLogger stdlog(&cout, Kapua::LOG_LEVEL_DEBUG);
+  Kapua::Config config(&stdlog, "config.yaml");
+  Kapua::Core core(&stdlog, &config);
+  Kapua::UDPNetwork local_discover(&stdlog, &core);
 
-  delete local_discover;
-  delete core;
-  delete config;
-}
+  stdlog.info("Confguring...");
 
-bool start() {
-  stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
-  config = new Kapua::Config(stdlog, "config.yaml");
-  core = new Kapua::Core(stdlog, config);
-  local_discover = new Kapua::UDPNetwork(stdlog, core);
+  if (!config.load()) {
+    stdlog.error("Cannot load YAML config");
+    return EXIT_FAILURE;
+  };
 
-  if(!core->start()) {
-    stdlog->error("Cannot start core");
-    stop();
-    return false;
-  }
+  if(!config.load_cmd_line(ac,av)) {
+    return EXIT_SUCCESS;
+  };
 
-  local_discover->start(ntohs(config->server_address.sin_port));
-  return true;
-}
-
-int main() {
-  stdlog = new Kapua::IOStreamLogger(&cout, Kapua::LOG_LEVEL_DEBUG);
-
-  stdlog->debug("Starting...");
-  if(!start()) {
-    stdlog->error("Start failed");
-    delete stdlog;
+  stdlog.info("Starting...");
+  if(!core.start()) {
+    stdlog.error("core start failed");
     return EXIT_FAILURE;
   }
-  stdlog->info("Started");
+
+  stdlog.debug("Starting...");
+  if(!local_discover.start(ntohs(config.server_address.sin_port))) {
+    stdlog.error("local discover start failed");
+    return EXIT_FAILURE;
+  }
+  stdlog.info("Started");
 
   signal(SIGINT, signal_stop);
 
@@ -73,11 +61,9 @@ int main() {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  stdlog->debug("Stopping...");
-  stop();
-  stdlog->info("Stopped");
-
-  delete stdlog;
+  stdlog.debug("Stopping...");
+  local_discover.stop();
+  stdlog.info("Stopped");
 
   return EXIT_SUCCESS;
 }

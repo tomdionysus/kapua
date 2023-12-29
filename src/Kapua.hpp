@@ -21,5 +21,6 @@ struct KapuaVersion {
 };
 
 const KapuaVersion KAPUA_VERSION = {0x00, 0x00, 0x01};
+const std::string KAPUA_VERSION_STRING = "0.0.1";
 
 }  // namespace Kapua

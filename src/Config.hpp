@@ -33,6 +33,7 @@ class Config {
 
   bool load();
   bool dump();
+  bool load_cmd_line(int ac, char** av);
 
   enum class ParseResult { Success, InvalidFormat, InvalidUnit };
 
@@ -55,6 +56,7 @@ class Config {
   Logger* _logger;
   std::string _filename;
 
+  ParseResult parse_bool(const std::string& input, bool* result);
   ParseResult parse_duration(const std::string& input, long long& milliseconds);
   ParseResult parse_ipv4(const std::string& input, in_addr* addr);
   ParseResult parse_log_level(const std::string& input, LogLevel_t* level);

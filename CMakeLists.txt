@@ -31,6 +31,10 @@ add_library(
 	${SOURCES}
 )
 
+find_package(Boost 1.83.0 REQUIRED COMPONENTS thread program_options)
+include_directories(${Boost_INCLUDE_DIR})
+target_link_libraries(kapua ${Boost_LIBRARIES})
+
 find_package(YamlCpp REQUIRED)
 include_directories(${YAML_CPP_INCLUDE_DIR})
 target_link_libraries(kapua ${YAML_CPP_LIBRARIES})
@@ -46,7 +50,9 @@ add_executable(
 	kapua_link
 	examples/kapua_link/main.cpp
 )
-target_link_libraries(kapua_link kapua)
+target_link_libraries(kapua_link 
+	kapua
+)
 
 # Testing
 enable_testing()

@@ -21,13 +21,7 @@ Core ::~Core() { _logger->debug("Stopped"); }
 
 bool Core::start() {
   _logger->debug("Starting...");
-  if (!_config->load()) {
-    _logger->error("Cannot load config");
-    return false;
-  };
-
   _my_id = _get_random_id();
-
   _logger->debug("Started");
   return true;
 }
