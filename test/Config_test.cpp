@@ -11,6 +11,7 @@ class ConfigTestHelper : public Config {
   using Config::parse_bool;
   using Config::parse_duration;
   using Config::parse_log_level;
+  using Config::parse_hex_uint64;
 
   ConfigTestHelper(Logger* logger, std::string filename) : Config(logger, filename) {}
 };
@@ -199,4 +200,57 @@ TEST_F(ConfigTest, ParseBool_InvalidFormat) {
   bool result;
   ConfigTestHelper::ParseResult parseResult = config->parse_bool("invalid", &result);
   EXPECT_EQ(parseResult, ConfigTestHelper::ParseResult::InvalidFormat);
+}
+
+// parse_hex_uint64
+
+TEST_F(ConfigTest, ValidHexWith0xPrefix) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("0x1a2b3c4d5e6f7890", value);
+    EXPECT_EQ(result, Config::ParseResult::Success);
+    EXPECT_EQ(value, 0x1a2b3c4d5e6f7890ULL);
+}
+
+TEST_F(ConfigTest, ValidHexWithout0xPrefix) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("1a2b3c4d5e6f7890", value);
+    EXPECT_EQ(result, Config::ParseResult::Success);
+    EXPECT_EQ(value, 0x1a2b3c4d5e6f7890ULL);
+}
+
+TEST_F(ConfigTest, InvalidHexLength) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("1A2B3C4D5E6F7890", value);
+    EXPECT_EQ(result, Config::ParseResult::Success);
+    EXPECT_EQ(value, 0x1a2b3c4d5e6f7890ULL);
+}
+
+TEST_F(ConfigTest, InvalidHexCharacters) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("0x1a2b3c4d5e6f789012", value);
+    EXPECT_EQ(result, Config::ParseResult::InvalidFormat);
+}
+
+TEST_F(ConfigTest, PrefixButNoData) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("0x", value);
+    EXPECT_EQ(result, Config::ParseResult::InvalidFormat);
+}
+
+TEST_F(ConfigTest, InvalidTooShort) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("0x2871239", value);
+    EXPECT_EQ(result, Config::ParseResult::InvalidFormat);
+}
+
+TEST_F(ConfigTest, EmptyString) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("", value);
+    EXPECT_EQ(result, Config::ParseResult::InvalidFormat);
+}
+
+TEST_F(ConfigTest, InvalidHexPrefix) {
+    uint64_t value = 0;
+    ConfigTestHelper::ParseResult result = config->parse_hex_uint64("0y1a2b3c4d5e6f7890", value);
+    EXPECT_EQ(result, Config::ParseResult::InvalidFormat);
 }
