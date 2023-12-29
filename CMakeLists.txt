@@ -72,6 +72,7 @@ target_link_libraries(
   kapua_test
   kapua
   GTest::gtest_main
+  GTest::gmock_main
 )
 include(GoogleTest)
 gtest_discover_tests(kapua_test)

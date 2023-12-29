@@ -35,12 +35,13 @@ struct Packet {
   enum PacketType : uint16_t {
     Ping,
     Pong,
+    Encryption,
   };
 
   uint8_t magic[5];
   KapuaVersion version;
 
-  Packet::PacketType type;
+  PacketType type;
   uint64_t packet_id;
   uint64_t from_id;
   uint64_t to_id;

@@ -54,6 +54,7 @@ std::string IOStreamLogger ::_getTimeStr() {
 ScopedLogger ::ScopedLogger(std::string prefix, Logger* logger) {
   _logger = logger;
   _prefix = prefix;
+  _using_log_level = false;
 }
 
 ScopedLogger::ScopedLogger(std::string prefix, Logger* logger, LogLevel_t level) {
