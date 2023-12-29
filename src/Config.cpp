@@ -120,7 +120,7 @@ bool Config::dump() {
   return true;
 }
 
-Config::ParseResult Config::parse_duration(const std::string& input, long long& milliseconds) {
+Config::ParseResult Config::parse_duration(const std::string& input, int64_t& milliseconds) {
   std::vector<std::pair<double, char>> components;  // Pairs of value and unit
   size_t pos = 0;
   size_t len = input.length();
@@ -181,7 +181,7 @@ Config::ParseResult Config::parse_duration(const std::string& input, long long& 
 
   // Ensure the last element is the only fraction
   for (size_t i = 0; i < components.size() - 1; ++i) {
-    if (components[i].first != static_cast<long long>(components[i].first)) {
+    if (components[i].first != static_cast<int64_t>(components[i].first)) {
       return ParseResult::InvalidFormat;
     }
   }
@@ -190,16 +190,16 @@ Config::ParseResult Config::parse_duration(const std::string& input, long long& 
   for (const auto& component : components) {
     switch (component.second) {
       case 'h':
-        milliseconds += static_cast<long long>(component.first * 3600000);
+        milliseconds += static_cast<int64_t>(component.first * 3600000);
         break;
       case 'm':
-        milliseconds += static_cast<long long>(component.first * 60000);
+        milliseconds += static_cast<int64_t>(component.first * 60000);
         break;
       case 's':
-        milliseconds += static_cast<long long>(component.first * 1000);
+        milliseconds += static_cast<int64_t>(component.first * 1000);
         break;
       case 'u':
-        milliseconds += static_cast<long long>(component.first);
+        milliseconds += static_cast<int64_t>(component.first);
         break;
     }
   }
