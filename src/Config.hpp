@@ -7,8 +7,10 @@
 #pragma once
 
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -38,7 +40,7 @@ class Config {
   enum class ParseResult { Success, InvalidFormat, InvalidUnit };
 
   // Config Parameters
-  uint64_t server_id;                 // server.id
+  uint64_t server_id;          // server.id
   sockaddr_in server_address;  // server.ip4_address
   uint16_t server_port;        // server.port
 
@@ -67,7 +69,7 @@ class Config {
   ParseResult parse_duration(const std::string& input, int64_t& milliseconds);
   ParseResult parse_ipv4(const std::string& input, in_addr* addr);
   ParseResult parse_log_level(const std::string& input, LogLevel_t* level);
- ParseResult  parse_hex_uint64(const std::string& input, uint64_t& value);
+  ParseResult parse_hex_uint64(const std::string& input, uint64_t& value);
 };
 
 };  // namespace Kapua

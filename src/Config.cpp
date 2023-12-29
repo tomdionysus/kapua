@@ -62,13 +62,13 @@ bool Config::load() {
 }
 
 bool Config::load_cmd_line(int ac, char** av) {
-
   std::string source = "cmd";
 
   try {
     po::options_description desc("Kapua v" + KAPUA_VERSION_STRING + "\nOptions:");
-    desc.add_options()("help", "Print this help")("server.address", po::value<std::string>(), "server ipv4 address")(
-        "server.port", po::value<uint16_t>(), "server ipv4 port")("local_discovery.enable", po::value<std::string>(), "enable UDP local discovery");
+    desc.add_options()("help", "Print this help")("server.id", po::value<std::string>(), "server id, 64-bit hex")(
+        "server.address", po::value<std::string>(), "server ipv4 address")("server.port", po::value<uint16_t>(), "server ipv4 port")(
+        "local_discovery.enable", po::value<std::string>(), "enable UDP local discovery");
 
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -263,38 +263,43 @@ bool Config::parse_server_id(const std::string& source, const std::string& input
   uint64_t id;
 
   if (parse_hex_uint64(input, id) != ParseResult::Success) {
-  _logger->error("("+source+") server.id - invalid format: " + input + " - must be a valid 64-bit hex number");
+    _logger->error("(" + source + ") server.id - invalid format: " + input + " - must be a valid 64-bit hex number");
     return false;
   }
   server_id = id;
-  _logger->debug("("+source+") server.id = " + std::to_string(server_id));
+  std::string hexId = [id] {
+    std::stringstream stream;
+    stream << std::hex << std::setw(16) << std::setfill('0') << id;
+    return stream.str();
+  }();
+  _logger->debug("(" + source + ") server.id = 0x" + hexId);
   return true;
 }
 
 bool Config::parse_server_address(const std::string& source, const std::string& input) {
   if (parse_ipv4(input, &server_address.sin_addr) != ParseResult::Success) {
-  _logger->error("("+source+") server.address - invalid format: " + input + " - must be a valid ipv4 address");
+    _logger->error("(" + source + ") server.address - invalid format: " + input + " - must be a valid ipv4 address");
     return false;
   }
-  _logger->debug("("+source+") server.address = " + input);
+  _logger->debug("(" + source + ") server.address = " + input);
   server_address.sin_port = htons(KAPUA_DEFAULT_PORT);
   return true;
 }
 
 bool Config::parse_server_port(const std::string& source, const uint16_t port) {
   server_address.sin_port = htons(port);
-  _logger->debug("("+source+") server.port = " + std::to_string(port));
+  _logger->debug("(" + source + ") server.port = " + std::to_string(port));
   return true;
 }
 
 bool Config::parse_local_discovery_enable(const std::string& source, const std::string& input) {
   bool enable;
   if (parse_bool(input, &enable) != ParseResult::Success) {
-  _logger->error("("+source+") local_discovery.enable - invalid format: " + input + " - must be 'true','t','yes','false','f','no'");
+    _logger->error("(" + source + ") local_discovery.enable - invalid format: " + input + " - must be 'true','t','yes','false','f','no'");
     return false;
   }
   local_discovery_enable = enable;
-  _logger->debug("("+source+") local_discovery.enable = " + std::string(local_discovery_enable ? "true" : "false"));
+  _logger->debug("(" + source + ") local_discovery.enable = " + std::string(local_discovery_enable ? "true" : "false"));
   return true;
 }
 
