@@ -248,4 +248,139 @@ bool UDPNetwork::_shutdown() {
   return true;
 }
 
+// AES CBC functions 
+
+#include <iostream>
+#include <iomanip>
+#include <cstring>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+
+// AES encryption and decryption functions
+bool UDPNetwork::_aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext,
+                 size_t plaintext_len, uint8_t* ciphertext) {
+    EVP_CIPHER_CTX* ctx;
+    int len;
+    int ciphertext_len;
+
+    // Create and initialize the context
+    if (!(ctx = EVP_CIPHER_CTX_new()))
+        return false;
+
+    // Initialize the encryption operation
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    // Provide the plaintext to be encrypted
+    if (EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+    ciphertext_len = len;
+
+    // Finalize the encryption
+    if (EVP_EncryptFinal_ex(ctx, ciphertext + len, &len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+    ciphertext_len += len;
+
+    // Clean up
+    EVP_CIPHER_CTX_free(ctx);
+
+    return true;
+}
+
+bool UDPNetwork::_aes_decrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* ciphertext,
+                 size_t ciphertext_len, uint8_t* plaintext) {
+    EVP_CIPHER_CTX* ctx;
+    int len;
+    int plaintext_len;
+
+    // Create and initialize the context
+    if (!(ctx = EVP_CIPHER_CTX_new()))
+        return false;
+
+    // Initialize the decryption operation
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    // Provide the ciphertext to be decrypted
+    if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+    plaintext_len = len;
+
+    // Finalize the decryption
+    if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+    plaintext_len += len;
+
+    // Clean up
+    EVP_CIPHER_CTX_free(ctx);
+
+    return true;
+}
+
+
+// Examples.
+
+// int main() {
+//     // AES-256 key (32 bytes)
+//     unsigned char aes_key[32];
+//     // Securely generate a random AES key
+//     if (RAND_bytes(aes_key, sizeof(aes_key)) != 1) {
+//         std::cerr << "Error generating AES key." << std::endl;
+//         return 1;
+//     }
+
+//     // Generate a secure random IV (Initialization Vector) for AES
+//     unsigned char iv[EVP_MAX_IV_LENGTH];
+//     if (RAND_bytes(iv, EVP_MAX_IV_LENGTH) != 1) {
+//         std::cerr << "Error generating IV." << std::endl;
+//         return 1;
+//     }
+
+//     // Message to encrypt
+//     const char* plaintext = "Hello, OpenSSL AES-256 CBC Encryption!";
+
+//     // Ensure the plaintext is a multiple of the block size (16 bytes for AES)
+//     size_t plaintext_len = strlen(plaintext);
+//     size_t padded_len = (plaintext_len + 15) & ~15;  // Round up to the nearest multiple of 16
+//     uint8_t padded_plaintext[padded_len];
+//     memset(padded_plaintext, 0, sizeof(padded_plaintext));
+//     memcpy(padded_plaintext, plaintext, plaintext_len);
+
+//     // Buffer for ciphertext and decrypted text
+//     uint8_t ciphertext[padded_len];
+//     uint8_t decrypted[padded_len];
+
+//     // Encrypt the plaintext
+//     if (!aes_encrypt(aes_key, iv, padded_plaintext, padded_len, ciphertext)) {
+//         std::cerr << "Error encrypting." << std::endl;
+//         return 1;
+//     }
+
+//     // Decrypt the ciphertext
+//     if (!aes_decrypt(aes_key, iv, ciphertext, padded_len, decrypted)) {
+//         std::cerr << "Error decrypting." << std::endl;
+//         return 1;
+//     }
+
+//     // Display the results
+//     std::cout << "Original Text: " << plaintext << std::endl;
+//     std::cout << "Encrypted Text: ";
+//     for (size_t i = 0; i < padded_len; ++i) {
+//         std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)ciphertext[i];
+//     }
+//     std::cout << std::endl
+// }
+
 }  // namespace Kapua

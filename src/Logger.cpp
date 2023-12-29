@@ -38,6 +38,11 @@ void IOStreamLogger ::error(std::string log) {
   cerr << _getTimeStr() << " [ERROR] " << log << "\n";
 }
 
+void IOStreamLogger ::raw(std::string log) {
+  std::lock_guard<std::mutex> lock(_logging_mutex);
+  cerr << _getTimeStr() << " [     ] " << log << "\n";
+}
+
 std::string IOStreamLogger ::_getTimeStr() {
   time_t now;
   time(&now);
@@ -74,5 +79,6 @@ void ScopedLogger ::warn(std::string log) {
 }
 
 void ScopedLogger ::error(std::string log) { _logger->error("(" + _prefix + ") " + log); }
+void ScopedLogger ::raw(std::string log) { _logger->raw("(" + _prefix + ") " + log); }
 
 }  // namespace Kapua

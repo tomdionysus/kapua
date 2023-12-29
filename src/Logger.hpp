@@ -23,6 +23,7 @@ enum LogLevel_t : uint8_t {
 class Logger {
  public:
   virtual ~Logger() {}
+  virtual void raw(std::string log) = 0;
   virtual void debug(std::string log) = 0;
   virtual void info(std::string log) = 0;
   virtual void warn(std::string log) = 0;
@@ -34,6 +35,7 @@ class IOStreamLogger : public Logger {
   IOStreamLogger(std::ostream* stream, LogLevel_t level);
   ~IOStreamLogger() {}
 
+  virtual void raw(std::string log) override;
   virtual void debug(std::string log) override;
   virtual void info(std::string log) override;
   virtual void warn(std::string log) override;
@@ -54,6 +56,7 @@ class ScopedLogger : public Logger {
   ScopedLogger(std::string prefix, Logger* logger, LogLevel_t level);
   ~ScopedLogger() {}
 
+  virtual void raw(std::string log) override;
   virtual void debug(std::string log) override;
   virtual void info(std::string log) override;
   virtual void warn(std::string log) override;

@@ -14,6 +14,9 @@
 #include <string>
 #include <thread>
 
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -36,13 +39,16 @@ class UDPNetwork {
   bool start(int port);
   bool stop();
 
- private:
+ protected:
   bool _listen(int port);
   void _main_loop();
   void _broadcast();
   ssize_t _receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr);
   ssize_t _send(const char* buffer, size_t len, const sockaddr_in& client_addr);
   bool _shutdown();
+
+  bool _aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext);
+  bool _aes_decrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext);
 
   Core* _core;
 

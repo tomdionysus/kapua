@@ -11,6 +11,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # GoogleTest
 include(FetchContent)
+cmake_policy(SET CMP0135 NEW)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
@@ -35,6 +36,10 @@ find_package(Boost 1.83.0 REQUIRED COMPONENTS thread program_options)
 include_directories(${Boost_INCLUDE_DIR})
 target_link_libraries(kapua ${Boost_LIBRARIES})
 
+find_package(OpenSSL 3.0 REQUIRED)
+include_directories(${OPENSSL_INCLUDE_DIR})
+target_link_libraries(kapua ${OPENSSL_LIBRARIES})
+
 find_package(YamlCpp REQUIRED)
 include_directories(${YAML_CPP_INCLUDE_DIR})
 target_link_libraries(kapua ${YAML_CPP_LIBRARIES})
@@ -44,13 +49,13 @@ include_directories(${CURL_INCLUDE_DIR})
 target_link_libraries(kapua ${CURL_LIBRARIES})
 
 # Examples
-project(kapua_link CXX C ASM)
+project(kapuad CXX C ASM)
 
 add_executable(
-	kapua_link
-	examples/kapua_link/main.cpp
+	kapuad
+	examples/kapuad/main.cpp
 )
-target_link_libraries(kapua_link 
+target_link_libraries(kapuad 
 	kapua
 )
 

@@ -14,8 +14,8 @@ local_discovery:
 trackers:
   enable: true
   servers:
-    - hint.kapua.org.nz
-    - hint.blackraven.co.nz
+    - nzl.tracker.kapua.org.nz
+    - tracker.blackraven.co.nz
 
 logging:
   level: debug
