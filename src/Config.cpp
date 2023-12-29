@@ -173,4 +173,29 @@ Config::ParseResult Config::parse_ipv4(const std::string& input, in_addr* addr) 
   return Config::ParseResult::Success;
 }
 
+Config::ParseResult Config::parse_log_level(const std::string& input, LogLevel_t* level) {
+    std::string lowercaseInput = input;
+
+    // Convert the input string to lowercase
+    for (char& c : lowercaseInput) {
+        c = std::tolower(c);
+    }
+
+    if (lowercaseInput == "error") {
+        *level = LOG_LEVEL_ERROR;
+        return ParseResult::Success;
+    } else if (lowercaseInput == "warn" || lowercaseInput == "warning") {
+        *level = LOG_LEVEL_WARN;
+        return ParseResult::Success;
+    } else if (lowercaseInput == "info") {
+        *level = LOG_LEVEL_INFO;
+        return ParseResult::Success;
+    } else if (lowercaseInput == "debug") {
+        *level = LOG_LEVEL_DEBUG;
+        return ParseResult::Success;
+    } else {
+        return ParseResult::InvalidFormat;
+    }
+}
+
 }  // namespace Kapua

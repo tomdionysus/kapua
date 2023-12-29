@@ -17,6 +17,7 @@ enum LogLevel_t : uint8_t {
   LOG_LEVEL_WARN = 1,
   LOG_LEVEL_INFO = 2,
   LOG_LEVEL_DEBUG = 3,
+  LOG_LEVEL_UNKNOWN = 255,
 };
 
 class Logger {

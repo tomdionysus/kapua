@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 #include "Config.hpp"
+#include "Logger.hpp"
 
-class ConfigTestHelper : public Kapua::Config {
+using namespace Kapua;
+
+class ConfigTestHelper : public Config {
 public:
-    using Kapua::Config::parse_duration;
+    using Config::parse_duration;
+    using Config::parse_log_level;
 
-    ConfigTestHelper(Kapua::Logger* logger, std::string filename)
-        : Kapua::Config(logger, filename) {}
+    ConfigTestHelper(Logger* logger, std::string filename)
+        : Config(logger, filename) {}
 };
 
 class ConfigTest : public ::testing::Test {
@@ -18,6 +22,8 @@ protected:
         config = std::make_unique<ConfigTestHelper>(nullptr, "test/fixtures/config_full.yaml");
     }
 };
+
+// parse duration
 
 TEST_F(ConfigTest, ParseDuration_Hours) {
     long long milliseconds;
@@ -71,4 +77,60 @@ TEST_F(ConfigTest, ParseDuration_InvalidUnit) {
     long long milliseconds;
     ConfigTestHelper::ParseResult result = config->parse_duration("1k", milliseconds);
     EXPECT_EQ(result, ConfigTestHelper::ParseResult::InvalidUnit);
+}
+
+// parse_log_level
+
+TEST_F(ConfigTest, ParseLogLevel_Error) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("error", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::Success);
+    EXPECT_EQ(level, LOG_LEVEL_ERROR);
+}
+
+TEST_F(ConfigTest, ParseLogLevel_Warn) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("warn", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::Success);
+    EXPECT_EQ(level, LOG_LEVEL_WARN);
+}
+
+TEST_F(ConfigTest, ParseLogLevel_Warning) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("warning", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::Success);
+    EXPECT_EQ(level, LOG_LEVEL_WARN);
+}
+
+TEST_F(ConfigTest, ParseLogLevel_Info) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("info", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::Success);
+    EXPECT_EQ(level, LOG_LEVEL_INFO);
+}
+
+TEST_F(ConfigTest, ParseLogLevel_Debug) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("debug", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::Success);
+    EXPECT_EQ(level, LOG_LEVEL_DEBUG);
+}
+
+TEST_F(ConfigTest, ParseLogLevel_MixedCase) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("WaRn", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::Success);
+    EXPECT_EQ(level, LOG_LEVEL_WARN);
+}
+
+TEST_F(ConfigTest, ParseLogLevel_InvalidFormat) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("invalid", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::InvalidFormat);
+}
+
+TEST_F(ConfigTest, ParseLogLevel_EmptyString) {
+    LogLevel_t level;
+    ConfigTestHelper::ParseResult result = config->parse_log_level("", &level);
+    EXPECT_EQ(result, ConfigTestHelper::ParseResult::InvalidFormat);
 }
