@@ -2,9 +2,9 @@
 #include <gtest/gtest.h>
 #include "Logger.hpp" // Include the Logger header
 
-namespace Kapua {
+namespace KapuaTest {
 
-class MockLogger : public Logger {
+class MockLogger : public Kapua::Logger {
  public:
   MOCK_METHOD(void, raw, (std::string log), (override));
   MOCK_METHOD(void, debug, (std::string log), (override));

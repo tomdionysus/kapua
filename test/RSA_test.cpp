@@ -14,6 +14,8 @@
 
 using namespace Kapua;
 
+namespace KapuaTest {
+
 class RSATest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -113,6 +115,7 @@ TEST_F(RSATest, EncryptAndDecryptAESContext) {
   ASSERT_TRUE(rsa->decryptContext(&decryptedContext, keyPair.privateKey, buffer, encryptedSize, &decryptedSize));
 
   // Compare the decrypted context with the original
+  ASSERT_EQ(decryptedSize, sizeof(AESContext));
   ASSERT_EQ(memcmp(&originalContext, &decryptedContext, sizeof(AESContext)), 0);
 
   // Clean up
@@ -120,6 +123,6 @@ TEST_F(RSATest, EncryptAndDecryptAESContext) {
   EVP_PKEY_free(keyPair.privateKey);
 }
 
-
+}
 
 
