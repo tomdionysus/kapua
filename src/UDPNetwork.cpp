@@ -248,87 +248,83 @@ bool UDPNetwork::_shutdown() {
   return true;
 }
 
-// AES CBC functions 
+// AES CBC functions
 
-#include <iostream>
-#include <iomanip>
-#include <cstring>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+
 // AES encryption and decryption functions
-bool UDPNetwork::_aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext,
-                 size_t plaintext_len, uint8_t* ciphertext) {
-    EVP_CIPHER_CTX* ctx;
-    int len;
-    int ciphertext_len;
+bool UDPNetwork::_aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext) {
+  EVP_CIPHER_CTX* ctx;
+  int len;
+  int ciphertext_len;
 
-    // Create and initialize the context
-    if (!(ctx = EVP_CIPHER_CTX_new()))
-        return false;
+  // Create and initialize the context
+  if (!(ctx = EVP_CIPHER_CTX_new())) return false;
 
-    // Initialize the encryption operation
-    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
-        EVP_CIPHER_CTX_free(ctx);
-        return false;
-    }
-
-    // Provide the plaintext to be encrypted
-    if (EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len) != 1) {
-        EVP_CIPHER_CTX_free(ctx);
-        return false;
-    }
-    ciphertext_len = len;
-
-    // Finalize the encryption
-    if (EVP_EncryptFinal_ex(ctx, ciphertext + len, &len) != 1) {
-        EVP_CIPHER_CTX_free(ctx);
-        return false;
-    }
-    ciphertext_len += len;
-
-    // Clean up
+  // Initialize the encryption operation
+  if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
     EVP_CIPHER_CTX_free(ctx);
+    return false;
+  }
 
-    return true;
+  // Provide the plaintext to be encrypted
+  if (EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len) != 1) {
+    EVP_CIPHER_CTX_free(ctx);
+    return false;
+  }
+  ciphertext_len = len;
+
+  // Finalize the encryption
+  if (EVP_EncryptFinal_ex(ctx, ciphertext + len, &len) != 1) {
+    EVP_CIPHER_CTX_free(ctx);
+    return false;
+  }
+  ciphertext_len += len;
+
+  // Clean up
+  EVP_CIPHER_CTX_free(ctx);
+
+  return true;
 }
 
-bool UDPNetwork::_aes_decrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* ciphertext,
-                 size_t ciphertext_len, uint8_t* plaintext) {
-    EVP_CIPHER_CTX* ctx;
-    int len;
-    int plaintext_len;
+bool UDPNetwork::_aes_decrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext) {
+  EVP_CIPHER_CTX* ctx;
+  int len;
+  int plaintext_len;
 
-    // Create and initialize the context
-    if (!(ctx = EVP_CIPHER_CTX_new()))
-        return false;
+  // Create and initialize the context
+  if (!(ctx = EVP_CIPHER_CTX_new())) return false;
 
-    // Initialize the decryption operation
-    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
-        EVP_CIPHER_CTX_free(ctx);
-        return false;
-    }
-
-    // Provide the ciphertext to be decrypted
-    if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len) != 1) {
-        EVP_CIPHER_CTX_free(ctx);
-        return false;
-    }
-    plaintext_len = len;
-
-    // Finalize the decryption
-    if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1) {
-        EVP_CIPHER_CTX_free(ctx);
-        return false;
-    }
-    plaintext_len += len;
-
-    // Clean up
+  // Initialize the decryption operation
+  if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
     EVP_CIPHER_CTX_free(ctx);
+    return false;
+  }
 
-    return true;
+  // Provide the ciphertext to be decrypted
+  if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len) != 1) {
+    EVP_CIPHER_CTX_free(ctx);
+    return false;
+  }
+  plaintext_len = len;
+
+  // Finalize the decryption
+  if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1) {
+    EVP_CIPHER_CTX_free(ctx);
+    return false;
+  }
+  plaintext_len += len;
+
+  // Clean up
+  EVP_CIPHER_CTX_free(ctx);
+
+  return true;
 }
-
 
 // Examples.
 

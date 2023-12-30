@@ -1,6 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "Logger.hpp" // Include the Logger header
+
+#include "Logger.hpp"  // Include the Logger header
 
 namespace KapuaTest {
 
@@ -13,4 +14,4 @@ class MockLogger : public Kapua::Logger {
   MOCK_METHOD(void, error, (std::string log), (override));
 };
 
-} // namespace Kapua
+}  // namespace KapuaTest

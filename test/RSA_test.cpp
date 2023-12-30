@@ -1,16 +1,16 @@
 #include "RSA.hpp"
 
 #include <gtest/gtest.h>
-#include <fstream>
-#include <memory>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+
+#include <fstream>
 #include <iostream>
+#include <memory>
 
-#include "Logger.hpp"
 #include "Config.hpp"
-
-#include "MockLogger.hpp" // Correct path to MockLogger if necessary
+#include "Logger.hpp"
+#include "MockLogger.hpp"  // Correct path to MockLogger if necessary
 
 using namespace Kapua;
 
@@ -123,6 +123,4 @@ TEST_F(RSATest, EncryptAndDecryptAESContext) {
   EVP_PKEY_free(keyPair.privateKey);
 }
 
-}
-
-
+}  // namespace KapuaTest

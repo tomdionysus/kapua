@@ -6,6 +6,9 @@
 //
 #pragma once
 
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -13,9 +16,6 @@
 #include <sstream>
 #include <string>
 #include <thread>
-
-#include <openssl/evp.h>
-#include <openssl/rand.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
