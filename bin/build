@@ -1,14 +1,19 @@
 #!/bin/bash
 
-num_cores=1
+echo "Building kapura"
 
 # Check OS type
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # For Linux
     num_cores=$(nproc)
+    echo "Linux detected, Cores: $num_cores"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     # For macOS
     num_cores=$(sysctl -n hw.ncpu)
+    echo "macOS detected, Cores: $num_cores"
+else
+    num_cores=1
+    echo "Unknown OS type $OSTYPE"
 fi
 
 rm -rf build
