@@ -3,7 +3,7 @@ version: 2.1
 executors:
   default:
     docker:
-      - image: circleci/cpp:14
+      - image: ubuntu-2204:2023.10.1
 
 jobs:
   build:
@@ -16,10 +16,7 @@ jobs:
           name: Install Dependencies
           command: |
             sudo apt-get update
-            sudo apt-get install -y libboost-all-dev
-            sudo apt-get install -y libssl-dev
-            sudo apt-get install -y libyaml-cpp-dev
-            sudo apt-get install -y libcurl4-openssl-dev
+            sudo apt-get install -y build-essentials libboost-all-dev libssl-dev libyaml-cpp-dev libcurl4-openssl-dev
 
       # Build kapua_test
       - run:
