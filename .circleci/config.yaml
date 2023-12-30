@@ -1,0 +1,44 @@
+version: 2.1
+
+executors:
+  default:
+    docker:
+      - image: circleci/cpp:14
+
+jobs:
+  build:
+    executor: default
+    steps:
+      - checkout
+
+      # Install required dependencies
+      - run:
+          name: Install Dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y libboost-all-dev
+            sudo apt-get install -y libssl-dev
+            sudo apt-get install -y libyaml-cpp-dev
+            sudo apt-get install -y libcurl4-openssl-dev
+
+      # Build kapua_test
+      - run:
+          name: Build kapua_test
+          command: |
+            mkdir build
+            cd build
+            cmake ..
+            make
+
+      # Run tests
+      - run:
+          name: Run Tests
+          command: |
+            cd build
+            ctest --output-on-failure
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build
