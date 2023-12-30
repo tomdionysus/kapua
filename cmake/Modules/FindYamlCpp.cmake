@@ -19,8 +19,8 @@ find_path(YAML_CPP_INCLUDE_DIR
 )
 
 # Check if yaml-cpp library and include directory were found
-if(NOT YAML_CPP_INCLUDE_DIR)
-    message(FATAL_ERROR "yaml-cpp include directory not found")
+if(NOT YAML_CPP_LIBRARY OR NOT YAML_CPP_INCLUDE_DIR)
+    message(FATAL_ERROR "yaml-cpp library or include directory not found")
 endif()
 
 # Check if we have built shared libraries
@@ -35,11 +35,9 @@ set(YAML_CPP_LIBRARY_DIR /usr/local/lib /usr/lib) # Set appropriate library dire
 set(YAML_CPP_INCLUDE_DIR ${YAML_CPP_INCLUDE_DIR})
 
 # Provide information to the user
-message(STATUS "Found yaml-cpp include directory: ${YAML_CPP_INCLUDE_DIR}")
-if(YAML_CPP_LIBRARY)
 message(STATUS "Found yaml-cpp library: ${YAML_CPP_LIBRARY}")
+message(STATUS "Found yaml-cpp include directory: ${YAML_CPP_INCLUDE_DIR}")
 message(STATUS "Built shared libraries: ${YAML_CPP_SHARED_LIBS_BUILT}")
-endif()
 
 # Export the variables to the cache
 set(YAML_CPP_LIBRARIES ${YAML_CPP_LIBRARIES} CACHE STRING "Libraries to link against")
