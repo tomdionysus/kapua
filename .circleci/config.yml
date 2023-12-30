@@ -3,7 +3,7 @@ version: 2.1
 executors:
   default:
     docker:
-      - image: ubuntu-2204:2023.10.1
+      - image: ubuntu:latest
 
 jobs:
   build:
