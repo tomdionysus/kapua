@@ -36,7 +36,7 @@ find_package(Boost 1.83.0 REQUIRED COMPONENTS thread program_options)
 include_directories(${Boost_INCLUDE_DIR})
 target_link_libraries(kapua ${Boost_LIBRARIES})
 
-find_package(OpenSSL 3.0 REQUIRED)
+find_package(OpenSSL 3.2 REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 target_link_libraries(kapua ${OPENSSL_LIBRARIES})
 

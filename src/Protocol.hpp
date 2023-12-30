@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <cstring>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -31,6 +32,7 @@ typedef struct Peer {
   sockaddr_in addr;
 } Peer_t;
 
+#pragma pack(push, 1)
 struct Packet {
   enum PacketType : uint16_t {
     Ping,
@@ -48,11 +50,7 @@ struct Packet {
   uint16_t ttl = 32;
   uint16_t length;
 
-  union {
-    struct {
-      Peer_t peer[];
-    } peer_list;
-  };
+  uint8_t data[KAPUA_MAX_PACKET_SIZE];
 
   Packet() {
     std::memcpy(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size());
@@ -67,5 +65,7 @@ struct Packet {
   }
   std::string getVersionString() { return std::to_string(version.major) + "." + std::to_string(version.minor) + "." + std::to_string(version.patch); }
 };
+
+#pragma pack(pop)
 
 }  // namespace Kapua

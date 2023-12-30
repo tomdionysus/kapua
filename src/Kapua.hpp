@@ -11,14 +11,19 @@
 namespace Kapua {
 
 #define KAPUA_DEFAULT_PORT 11860
+#define KAPUA_MAX_PACKET_SIZE (4096-38)
 
 const std::array<uint8_t, 5> KAPUA_MAGIC_NUMBER = {0x4B, 0x61, 0x70, 0x75, 0x61};
+
+#pragma pack(push, 1)
 
 struct KapuaVersion {
   uint8_t major;
   uint8_t minor;
   uint8_t patch;
 };
+
+#pragma pack(pop)
 
 const KapuaVersion KAPUA_VERSION = {0x00, 0x00, 0x01};
 const std::string KAPUA_VERSION_STRING = "0.0.1";

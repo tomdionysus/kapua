@@ -1,0 +1,21 @@
+#!/bin/sh
+
+num_cores=1
+
+# Check OS type
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # For Linux
+    num_cores=$(nproc)
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    # For macOS
+    num_cores=$(sysctl -n hw.ncpu)
+fi
+
+rm -rf build
+mkdir build
+cp config.example.yaml build/config.yaml
+cp -r test/fixtures build/fixtures
+cd build
+cmake ..
+make -j$num_cores
+cd ..

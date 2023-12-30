@@ -16,9 +16,22 @@ jobs:
           name: Install Dependencies
           command: |
             apt-get update
-            apt-get install -y build-essential wget cmake libssl-dev libyaml-cpp-dev libcurl4-openssl-dev
+            apt-get install -y build-essential wget cmake libssl-dev libyaml-dev libyaml-cpp-dev libcurl4-openssl-dev
+
+      - run:
+          name: Get Boost
+          command: |
             wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
             tar -xjf boost_1_83_0.tar.bz2
+
+      - save_cache:
+          key: boost-cache
+          paths:
+            - boost_1_83_0
+
+      - run:
+          name: Build Boost
+          command: |
             cd boost_1_83_0
             ./bootstrap.sh --prefix=/usr/local
             ./b2 install
