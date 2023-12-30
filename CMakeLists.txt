@@ -9,9 +9,13 @@ project(kapua CXX C ASM)
 # load extra modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-# GoogleTest
 include(FetchContent)
-cmake_policy(SET CMP0135 NEW)
+
+if(CMAKE_VERSION VERSION_GREATER "3.22.1")
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
+# GoogleTest
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
