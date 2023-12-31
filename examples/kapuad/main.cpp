@@ -27,7 +27,7 @@ void signal_stop(int signum) {
 
 int main(int ac, char** av) {
   Kapua::IOStreamLogger stdlog(&cout, Kapua::LOG_LEVEL_DEBUG);
-  Kapua::Config config(&stdlog, "config.yaml");
+  Kapua::Config config(&stdlog);
   Kapua::Core core(&stdlog, &config);
   Kapua::UDPNetwork local_discover(&stdlog, &core);
 
@@ -37,7 +37,7 @@ int main(int ac, char** av) {
 
   stdlog.info("Confguring...");
 
-  if (!config.load()) {
+  if (!config.load_yaml("config.yaml")) {
     stdlog.error("Cannot load YAML config");
     return EXIT_FAILURE;
   };

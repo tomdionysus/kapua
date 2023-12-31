@@ -2,9 +2,11 @@
 
 #include <gtest/gtest.h>
 
-#include "Logger.hpp"
+#include "MockLogger.hpp"
 
 using namespace Kapua;
+
+namespace KapuaTest {
 
 class ConfigTestHelper : public Config {
  public:
@@ -13,16 +15,17 @@ class ConfigTestHelper : public Config {
   using Config::parse_hex_uint64;
   using Config::parse_log_level;
 
-  ConfigTestHelper(Logger* logger, std::string filename) : Config(logger, filename) {}
+  ConfigTestHelper(Logger* logger) : Config(logger) {}
 };
 
 class ConfigTest : public ::testing::Test {
  protected:
+  std::unique_ptr<MockLogger> logger;
   std::unique_ptr<ConfigTestHelper> config;
 
   void SetUp() override {
-    // Create a ConfigTestHelper instance with a null logger for testing
-    config = std::make_unique<ConfigTestHelper>(nullptr, "test/fixtures/config_full.yaml");
+    logger = std::make_unique<MockLogger>();
+    config = std::make_unique<ConfigTestHelper>(logger.get());
   }
 };
 
@@ -253,4 +256,6 @@ TEST_F(ConfigTest, InvalidHexPrefix) {
   uint64_t value = 0;
   ConfigTestHelper::ParseResult result = config->parse_hex_uint64("0y1a2b3c4d5e6f7890", value);
   EXPECT_EQ(result, Config::ParseResult::InvalidFormat);
+}
+
 }

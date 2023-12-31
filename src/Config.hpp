@@ -30,12 +30,13 @@ namespace Kapua {
 
 class Config {
  public:
-  Config(Logger* logger, std::string filename);
+  Config(Logger* logger);
   ~Config();
 
-  bool load();
-  bool dump();
+  bool load_yaml(std::string filename);
   bool load_cmd_line(int ac, char** av);
+
+  bool dump();
 
   enum class ParseResult { Success, InvalidFormat, InvalidUnit };
 
@@ -56,7 +57,6 @@ class Config {
 
  protected:
   Logger* _logger;
-  std::string _filename;
 
   // Config Parsers
   bool parse_server_id(const std::string& source, const std::string& id);

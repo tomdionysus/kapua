@@ -12,9 +12,8 @@ namespace po = boost::program_options;
 
 namespace Kapua {
 
-Config::Config(Logger* logger, std::string filename) {
+Config::Config(Logger* logger) {
   _logger = new ScopedLogger("Configuration", logger);
-  _filename = filename;
 
   // Defaults
   server_address.sin_family = AF_INET;
@@ -24,13 +23,13 @@ Config::Config(Logger* logger, std::string filename) {
 
 Config::~Config() { delete _logger; }
 
-bool Config::load() {
-  _logger->info("Loading config file " + _filename);
+bool Config::load_yaml(std::string filename) {
+  _logger->info("Loading config file " + filename);
 
   std::string source = "yaml";
 
   try {
-    YAML::Node config = YAML::LoadFile(_filename);
+    YAML::Node config = YAML::LoadFile(filename);
 
     if (config.Type() != YAML::NodeType::Map) {
       _logger->error("Root YAML for config must be an object (YAML map)");
@@ -46,10 +45,10 @@ bool Config::load() {
     if (config["local_discovery"]["enable"] && !parse_local_discovery_enable(source, config["local_discovery"]["enable"].as<std::string>())) return false;
 
   } catch (const YAML::BadFile& e) {
-    _logger->error("Cannot open file " + _filename + " (" + e.msg + ")");
+    _logger->error("Cannot open file " + filename + " (" + e.msg + ")");
     return false;
   } catch (const YAML::ParserException& e) {
-    _logger->error("Cannot parse file " + _filename + " (" + e.msg + ")");
+    _logger->error("Cannot parse file " + filename + " (" + e.msg + ")");
     return false;
   } catch (exception& e) {
     _logger->error(std::string("Error while parsing configuration YAML: ") + e.what());
