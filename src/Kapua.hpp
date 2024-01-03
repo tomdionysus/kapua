@@ -11,7 +11,6 @@
 namespace Kapua {
 
 #define KAPUA_DEFAULT_PORT 11860
-#define KAPUA_MAX_PACKET_SIZE 1400 - 38
 
 const std::array<uint8_t, 5> KAPUA_MAGIC_NUMBER = {0x4B, 0x61, 0x70, 0x75, 0x61};
 

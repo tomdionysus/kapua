@@ -125,7 +125,7 @@ void UDPNetwork::_main_loop() {
       _logger->error("Server receive error: " + std::string(strerror(errno)));
     } else if (len > 0) {
       std::string from_addr_str = std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port));
-      _logger->debug("Packet From " + from_addr_str + ", " + std::to_string(len) + " bytes.");
+      //_logger->debug("Packet From " + from_addr_str + ", " + std::to_string(len) + " bytes.");
 
       // Verify the packet
       if (len < 32) {
@@ -150,24 +150,10 @@ void UDPNetwork::_main_loop() {
           // Check ID does not exist
           Node* node = _core->find_node(pkt->from_id);
           if (!node) {
-            // Check ID does not exist
-            node = _core->find_node(from_addr);
-            if (node) {
-              // TODO: Supply more info here
-              _logger->warn("Packet received from known addr/port with incorrect ID");
-            } else {
-              _core->add_node(pkt->from_id, from_addr);
-              _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
-              _process_packet(node, pkt);
-            }
-          } else {
-            if ((SockaddrHashable)from_addr != node->addr) {
-              // TODO: Supply more info here
-              _logger->warn("Packet received with known ID from incorrect addr/port");
-            } else {
-              _process_packet(node, pkt);
-            }
-          }
+            node = _core->add_node(pkt->from_id, from_addr);
+            _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
+          } 
+          _process_packet(node, pkt);
         }
       }
     }
@@ -192,7 +178,7 @@ void UDPNetwork::_main_loop() {
 }
 
 void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
-  _logger->error("Processing Packet");
+  // _logger->error("Processing Packet");
 
   node->update_last_contact();
 }
@@ -212,7 +198,7 @@ void UDPNetwork::_broadcast() {
   broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
   // Do the send
-  _logger->debug("Discovery broadcast...");
+  // _logger->debug("Discovery broadcast...");
   ssize_t res = _send(reinterpret_cast<char*>(pkt.get()), sizeof(Packet), broadcast_addr);
 
   if (res == -1) {

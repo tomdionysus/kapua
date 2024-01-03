@@ -24,6 +24,7 @@
 
 namespace Kapua {
 
+#define KAPUA_MAX_PACKET_SIZE 1450
 #define KAPUA_ID_GROUP 0xFFFFFFFFFFFFFF01
 #define KAPUA_ID_BROADCAST 0xFFFFFFFFFFFFFFFF
 
@@ -37,20 +38,28 @@ struct Packet {
   enum PacketType : uint16_t {
     Ping,
     Pong,
-    Encryption,
+    PublicKey,
+    EncryptionContext,
   };
+
+  // --- This is the start of the header
 
   uint8_t magic[5];
   KapuaVersion version;
 
   PacketType type;
-  uint64_t packet_id;
-  uint64_t from_id;
-  uint64_t to_id;
-  uint16_t ttl = 32;
-  uint16_t length;
+  uint64_t packet_id;   // This packet ID
+  uint64_t from_id;     // The originating Node ID
+  uint64_t to_id;       // The destination Node ID
+  uint16_t ttl = 32;    // The time to live (should be decremented on forward)
+  uint64_t request_id;  // The request packet ID, if this is a reply, or 0x0000000000000000
+  uint16_t length = 0;  // The length of the data to follow
 
-  uint8_t data[KAPUA_MAX_PACKET_SIZE - 38];
+#define KAPUA_HEADER_SIZE 44
+
+  // --- This is the end of header
+
+  uint8_t data[KAPUA_MAX_PACKET_SIZE - KAPUA_HEADER_SIZE];
 
   Packet() {
     std::memcpy(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size());

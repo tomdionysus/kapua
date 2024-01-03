@@ -34,11 +34,12 @@ bool Core::start() {
   return true;
 }
 
-void Core::add_node(uint64_t id, sockaddr_in addr) {
+Node* Core::add_node(uint64_t id, sockaddr_in addr) {
   std::lock_guard<std::mutex> lock(_nodes_mutex);
   Node* node = new Node(id, addr);
   _nodes.insert({id, node});
   _nodes_by_addr.insert({(SockaddrHashable)addr, node});
+  return node;
 }
 
 void Core::remove_node(uint64_t id) {

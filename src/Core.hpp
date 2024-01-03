@@ -44,7 +44,7 @@ class Core {
 
   bool start();
 
-  void add_node(uint64_t id, sockaddr_in addr);
+  Node* add_node(uint64_t id, sockaddr_in addr);
   void remove_node(uint64_t id);
   Node* find_node(uint64_t id);
   Node* find_node(sockaddr_in addr);
