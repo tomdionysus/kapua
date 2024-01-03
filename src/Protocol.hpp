@@ -50,20 +50,20 @@ struct Packet {
   uint16_t ttl = 32;
   uint16_t length;
 
-  uint8_t data[KAPUA_MAX_PACKET_SIZE-38];
+  uint8_t data[KAPUA_MAX_PACKET_SIZE - 38];
 
   Packet() {
     std::memcpy(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size());
     version = KAPUA_VERSION;
   }
 
-  bool isMagicValid() { return std::memcmp(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size()) == 0; }
-  bool isVersionValid(bool strict = false) {
+  bool check_magic_valid() { return std::memcmp(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size()) == 0; }
+  bool check_version_valid(bool strict = false) {
     if (version.major != KAPUA_VERSION.major) return false;
     if (strict && version.minor > KAPUA_VERSION.minor) return false;
     return true;
   }
-  std::string getVersionString() { return std::to_string(version.major) + "." + std::to_string(version.minor) + "." + std::to_string(version.patch); }
+  std::string get_version_string() { return std::to_string(version.major) + "." + std::to_string(version.minor) + "." + std::to_string(version.patch); }
 };
 
 #pragma pack(pop)

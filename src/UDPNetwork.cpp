@@ -117,7 +117,7 @@ void UDPNetwork::_main_loop() {
 
   while (_running) {
     // If there's no standby buffer, allocate one
-    if(!pkt) pkt = std::make_shared<Packet>();
+    if (!pkt) pkt = std::make_shared<Packet>();
 
     // Receive if any
     ssize_t len = _receive(reinterpret_cast<char*>(pkt.get()), 65535, from_addr);
@@ -133,17 +133,17 @@ void UDPNetwork::_main_loop() {
         _logger->debug("Non-Kapua packet received (too short)");
       } else {
         // Valid magic Number?
-        if (!pkt->isMagicValid()) {
+        if (!pkt->check_magic_valid()) {
           std::string bad_magic = [&] {
             std::ostringstream oss;
             oss << "0x" << std::setfill('0') << std::setw(10) << std::hex << pkt->magic;
             return oss.str();
           }();
           _logger->debug("Non-Kapua packet received (bad magic number " + bad_magic + ")");
-        } else if (!pkt->isVersionValid()) {
+        } else if (!pkt->check_version_valid()) {
           // TODO: Setting for strict version checking
           // Version
-          _logger->debug("Packet received with incompatible version (" + pkt->getVersionString() + ")");
+          _logger->debug("Packet received with incompatible version (" + pkt->get_version_string() + ")");
         } else if (pkt->from_id == _core->get_my_id()) {
           // Ignore packets from us
         } else {
@@ -159,7 +159,6 @@ void UDPNetwork::_main_loop() {
               _core->add_node(pkt->from_id, from_addr);
               _logger->info("New node detected, ID: " + to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
               _process_packet(node, pkt);
-              pkt = nullptr;
             }
           } else {
             if ((SockaddrHashable)from_addr != node->addr) {
@@ -167,7 +166,6 @@ void UDPNetwork::_main_loop() {
               _logger->warn("Packet received with known ID from incorrect addr/port");
             } else {
               _process_packet(node, pkt);
-              pkt = nullptr;
             }
           }
         }
@@ -194,7 +192,7 @@ void UDPNetwork::_main_loop() {
 }
 
 void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
- _logger->error("Processing Packet");
+  _logger->error("Processing Packet");
 
   node->update_last_contact();
 }
@@ -214,7 +212,7 @@ void UDPNetwork::_broadcast() {
   broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
   // Do the send
-  _logger->debug("Discovery broadcast");
+  _logger->debug("Discovery broadcast...");
   ssize_t res = _send(reinterpret_cast<char*>(pkt.get()), sizeof(Packet), broadcast_addr);
 
   if (res == -1) {

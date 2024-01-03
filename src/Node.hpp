@@ -15,6 +15,7 @@
 
 namespace Kapua {
 
+// CAVEAT: Do not instatiate Node, all instances are managed by the Core class.
 class Node {
  public:
   Node(uint64_t pid) {

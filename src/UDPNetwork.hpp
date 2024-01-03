@@ -42,7 +42,6 @@ class UDPNetwork {
   bool start(int port);
   bool stop();
 
-
  protected:
   bool _listen(int port);
   void _main_loop();
