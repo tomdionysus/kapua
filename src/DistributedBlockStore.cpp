@@ -13,38 +13,38 @@ namespace Kapua {
 DistributedBlockStore::DistributedBlockStore(uint64_t id, const std::vector<uint64_t>& virtualIds, uint64_t capacity) : nodeId(id) {
   for (auto vid : virtualIds) {
     ring.insert(vid);
-    virtualToReal[vid] = id;
+    virtual_to_real[vid] = id;
   }
-  nodeCapacities[id] = std::make_pair(capacity, 0);
+  node_capacities[id] = std::make_pair(capacity, 0);
 }
 
-void DistributedBlockStore::addNode(uint64_t id, const std::vector<uint64_t>& virtualIds, uint64_t capacity) {
+void DistributedBlockStore::add_dbs_node(uint64_t id, const std::vector<uint64_t>& virtualIds, uint64_t capacity) {
   for (auto vid : virtualIds) {
     ring.insert(vid);
-    virtualToReal[vid] = id;
+    virtual_to_real[vid] = id;
   }
-  nodeCapacities[id] = std::make_pair(capacity, 0);
+  node_capacities[id] = std::make_pair(capacity, 0);
 }
 
-void DistributedBlockStore::removeNode(uint64_t id) {
-  for (auto it = virtualToReal.begin(); it != virtualToReal.end();) {
+void DistributedBlockStore::remove_dbs_node(uint64_t id) {
+  for (auto it = virtual_to_real.begin(); it != virtual_to_real.end();) {
     if (it->second == id) {
       ring.erase(it->first);
-      it = virtualToReal.erase(it);
+      it = virtual_to_real.erase(it);
     } else {
       ++it;
     }
   }
-  nodeCapacities.erase(id);
+  node_capacities.erase(id);
 }
 
-void DistributedBlockStore::updateNodeCapacity(uint64_t id, uint64_t newCapacity) {
-  if (nodeCapacities.find(id) != nodeCapacities.end()) {
-    nodeCapacities[id].first = newCapacity;
+void DistributedBlockStore::update_dbs_node_capacity(uint64_t id, uint64_t newCapacity) {
+  if (node_capacities.find(id) != node_capacities.end()) {
+    node_capacities[id].first = newCapacity;
   }
 }
 
-std::vector<uint64_t> DistributedBlockStore::getNodesForBlock(uint64_t blockId) const {
+std::vector<uint64_t> DistributedBlockStore::get_dbs_nodes_for_block(uint64_t blockId) const {
   std::vector<uint64_t> nodes;
   if (ring.empty()) {
     return nodes;
@@ -56,8 +56,8 @@ std::vector<uint64_t> DistributedBlockStore::getNodesForBlock(uint64_t blockId) 
   }
 
   for (int i = 0; i < 5 && it != ring.end(); ++i) {
-    uint64_t nodeId = virtualToReal.at(*it);
-    if (!isNodeOverloaded(nodeId)) {
+    uint64_t nodeId = virtual_to_real.at(*it);
+    if (!check_node_overloaded(nodeId)) {
       nodes.push_back(*it);
     }
     ++it;
@@ -68,9 +68,9 @@ std::vector<uint64_t> DistributedBlockStore::getNodesForBlock(uint64_t blockId) 
   return nodes;
 }
 
-bool DistributedBlockStore::isNodeOverloaded(uint64_t nodeId) const {
-  auto nodeCapacity = nodeCapacities.find(nodeId);
-  if (nodeCapacity != nodeCapacities.end()) {
+bool DistributedBlockStore::check_node_overloaded(uint64_t nodeId) const {
+  auto nodeCapacity = node_capacities.find(nodeId);
+  if (nodeCapacity != node_capacities.end()) {
     return nodeCapacity->second.second >= nodeCapacity->second.first;
   }
   return false;  // Assume not overloaded if node is not found

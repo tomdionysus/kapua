@@ -30,11 +30,11 @@ class RSA {
   RSA(Logger* logger, Config* config);
   ~RSA();
 
-  bool generateRSAKeyPair(const std::string& publicKeyFile, const std::string& privateKeyFile, int keyBits = 4096);
-  bool loadRSAKeyPair(const std::string& publicKeyFile, const std::string& privateKeyFile, KeyPair& keyPair);
+  bool generate_rsa_key_pair(const std::string& publicKeyFile, const std::string& privateKeyFile, int keyBits = 4096);
+  bool load_rsa_key_pair(const std::string& publicKeyFile, const std::string& privateKeyFile, KeyPair& keyPair);
 
-  bool encryptContext(const AESContext* context, EVP_PKEY* publicKey, uint8_t* out_buffer, size_t in_size, size_t* out_size);
-  bool decryptContext(AESContext* context, EVP_PKEY* privateKey, const uint8_t* in_buffer, size_t in_size, size_t* out_size);
+  bool encrypt_aes_context(const AESContext* context, EVP_PKEY* publicKey, uint8_t* out_buffer, size_t in_size, size_t* out_size);
+  bool decrypt_aes_context(AESContext* context, EVP_PKEY* privateKey, const uint8_t* in_buffer, size_t in_size, size_t* out_size);
 
  protected:
   Logger* _logger;

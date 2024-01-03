@@ -23,12 +23,12 @@ class RSATest : public ::testing::Test {
     rsa = std::make_unique<Kapua::RSA>(mockLogger.get(), nullptr);
   }
 
-  bool CheckFileExists(const std::string& name) {
+  bool check_file_exists(const std::string& name) {
     std::ifstream f(name.c_str());
     return f.good();
   }
 
-  AESContext generateRandomAESContext() {
+  AESContext generate_random_aes_context() {
     AESContext context;
     RAND_bytes(context.iv, sizeof(context.iv));
     RAND_bytes(context.session_key, sizeof(context.session_key));
@@ -45,13 +45,13 @@ TEST_F(RSATest, CheckLoggerMock) {
 }
 
 TEST_F(RSATest, LoadValidKeyPair) {
-  ASSERT_TRUE(CheckFileExists("fixtures/public.pem"));
-  ASSERT_TRUE(CheckFileExists("fixtures/private.pem"));
+  ASSERT_TRUE(check_file_exists("fixtures/public.pem"));
+  ASSERT_TRUE(check_file_exists("fixtures/private.pem"));
 
   KeyPair keyPair;
   keyPair.publicKey = nullptr;
   keyPair.privateKey = nullptr;
-  bool result = rsa->loadRSAKeyPair("fixtures/public.pem", "fixtures/private.pem", keyPair);
+  bool result = rsa->load_rsa_key_pair("fixtures/public.pem", "fixtures/private.pem", keyPair);
   EXPECT_TRUE(result);
 
   if (keyPair.publicKey) EVP_PKEY_free(keyPair.publicKey);
@@ -63,38 +63,38 @@ TEST_F(RSATest, LoadKeyPairWithNonExistentPublicKey) {
   KeyPair keyPair;
   keyPair.publicKey = nullptr;
   keyPair.privateKey = nullptr;
-  bool result = rsa->loadRSAKeyPair("fixtures/non_existent_public.pem", "fixtures/private.pem", keyPair);
+  bool result = rsa->load_rsa_key_pair("fixtures/non_existent_public.pem", "fixtures/private.pem", keyPair);
   EXPECT_FALSE(result);
 }
 
 TEST_F(RSATest, LoadKeyPairWithNonExistentPrivateKey) {
   EXPECT_CALL(*mockLogger, error("(RSA) Error opening private key PEM file."));
   KeyPair keyPair;
-  bool result = rsa->loadRSAKeyPair("../test/fixtures/public.pem", "../test/fixtures/non_existent_private.pem", keyPair);
+  bool result = rsa->load_rsa_key_pair("../test/fixtures/public.pem", "../test/fixtures/non_existent_private.pem", keyPair);
   EXPECT_FALSE(result);
 }
 
 TEST_F(RSATest, LoadKeyPairWithInvalidPublicKeyFormat) {
   EXPECT_CALL(*mockLogger, error("(RSA) Error opening public key PEM file."));
   KeyPair keyPair;
-  bool result = rsa->loadRSAKeyPair("../test/fixtures/invalid_format_public.pem", "../test/fixtures/private.pem", keyPair);
+  bool result = rsa->load_rsa_key_pair("../test/fixtures/invalid_format_public.pem", "../test/fixtures/private.pem", keyPair);
   EXPECT_FALSE(result);
 }
 
 TEST_F(RSATest, LoadKeyPairWithInvalidPrivateKeyFormat) {
   EXPECT_CALL(*mockLogger, error("(RSA) Error opening private key PEM file."));
   KeyPair keyPair;
-  bool result = rsa->loadRSAKeyPair("../test/fixtures/public.pem", "../test/fixtures/invalid_format_private.pem", keyPair);
+  bool result = rsa->load_rsa_key_pair("../test/fixtures/public.pem", "../test/fixtures/invalid_format_private.pem", keyPair);
   EXPECT_FALSE(result);
 }
 
 TEST_F(RSATest, EncryptAndDecryptAESContext) {
   // Load RSA key pair
   KeyPair keyPair;
-  ASSERT_TRUE(rsa->loadRSAKeyPair("fixtures/public.pem", "fixtures/private.pem", keyPair));
+  ASSERT_TRUE(rsa->load_rsa_key_pair("fixtures/public.pem", "fixtures/private.pem", keyPair));
 
   // Generate a random AESContext
-  AESContext originalContext = generateRandomAESContext();
+  AESContext originalContext = generate_random_aes_context();
 
   // Allocate buffer for encryption (2048 bits / 8 bits per byte)
   const size_t bufferSize = 2048 / 8;
@@ -102,7 +102,7 @@ TEST_F(RSATest, EncryptAndDecryptAESContext) {
   size_t encryptedSize;
 
   // Encrypt the AESContext with the public key
-  ASSERT_TRUE(rsa->encryptContext(&originalContext, keyPair.publicKey, buffer, bufferSize, &encryptedSize));
+  ASSERT_TRUE(rsa->encrypt_aes_context(&originalContext, keyPair.publicKey, buffer, bufferSize, &encryptedSize));
 
   // Check the encrypted is different
   ASSERT_NE(encryptedSize, 0);
@@ -112,7 +112,7 @@ TEST_F(RSATest, EncryptAndDecryptAESContext) {
   AESContext decryptedContext;
 
   size_t decryptedSize;
-  ASSERT_TRUE(rsa->decryptContext(&decryptedContext, keyPair.privateKey, buffer, encryptedSize, &decryptedSize));
+  ASSERT_TRUE(rsa->decrypt_aes_context(&decryptedContext, keyPair.privateKey, buffer, encryptedSize, &decryptedSize));
 
   // Compare the decrypted context with the original
   ASSERT_EQ(decryptedSize, sizeof(AESContext));

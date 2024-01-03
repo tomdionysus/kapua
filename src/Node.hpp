@@ -11,20 +11,29 @@
 #include <vector>
 
 #include "Node.hpp"
+#include "RSA.hpp"
 #include "SockaddrHashable.hpp"
 
 namespace Kapua {
 
 // CAVEAT: Do not instatiate Node, all instances are managed by the Core class.
 class Node {
+  enum class State {
+    Initialised,
+    Handshake,
+    Connected,
+  };
+
  public:
   Node(uint64_t pid) {
     id = pid;
     addr = sockaddr_in();
+    state = Node::State::Initialised;
   }
   Node(uint64_t pid, sockaddr_in paddr) {
     id = pid;
     addr = paddr;
+    state = Node::State::Initialised;
   }
   ~Node() {}
 
@@ -32,6 +41,9 @@ class Node {
 
   SockaddrHashable addr;
   uint64_t id;
+  State state;
+
+  AESContext aes_context;
 
   std::chrono::time_point<std::chrono::steady_clock> last_contact_time;
 

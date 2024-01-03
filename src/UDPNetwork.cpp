@@ -157,7 +157,7 @@ void UDPNetwork::_main_loop() {
               _logger->warn("Packet received from known addr/port with incorrect ID");
             } else {
               _core->add_node(pkt->from_id, from_addr);
-              _logger->info("New node detected, ID: " + to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
+              _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
               _process_packet(node, pkt);
             }
           } else {
@@ -273,13 +273,6 @@ bool UDPNetwork::_shutdown() {
 }
 
 // AES CBC functions
-
-#include <openssl/evp.h>
-#include <openssl/rand.h>
-
-#include <cstring>
-#include <iomanip>
-#include <iostream>
 
 // AES encryption and decryption functions
 bool UDPNetwork::_aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext) {

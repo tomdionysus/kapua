@@ -20,7 +20,7 @@ RSA::RSA(Logger* logger, Config* config) {
 
 RSA::~RSA() { delete _logger; }
 
-bool RSA::generateRSAKeyPair(const std::string& publicKeyFile, const std::string& privateKeyFile, int keyBits) {
+bool RSA::generate_rsa_key_pair(const std::string& publicKeyFile, const std::string& privateKeyFile, int keyBits) {
   OpenSSL_add_all_algorithms();
   OPENSSL_init_crypto(0, nullptr);
 
@@ -65,7 +65,7 @@ bool RSA::generateRSAKeyPair(const std::string& publicKeyFile, const std::string
   return true;
 }
 
-bool RSA::loadRSAKeyPair(const std::string& publicKeyFile, const std::string& privateKeyFile, KeyPair& keyPair) {
+bool RSA::load_rsa_key_pair(const std::string& publicKeyFile, const std::string& privateKeyFile, KeyPair& keyPair) {
   bool success = true;
 
   keyPair.publicKey = nullptr;
@@ -108,7 +108,7 @@ bool RSA::loadRSAKeyPair(const std::string& publicKeyFile, const std::string& pr
   return success;
 }
 
-bool RSA::encryptContext(const AESContext* context, EVP_PKEY* publicKey, uint8_t* out_buffer, size_t in_size, size_t* out_size) {
+bool RSA::encrypt_aes_context(const AESContext* context, EVP_PKEY* publicKey, uint8_t* out_buffer, size_t in_size, size_t* out_size) {
   EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(publicKey, nullptr);
 
   if (!ctx || EVP_PKEY_encrypt_init(ctx) <= 0) {
@@ -142,7 +142,7 @@ bool RSA::encryptContext(const AESContext* context, EVP_PKEY* publicKey, uint8_t
   return true;
 }
 
-bool RSA::decryptContext(AESContext* context, EVP_PKEY* privateKey, const uint8_t* in_buffer, size_t in_size, size_t* out_size) {
+bool RSA::decrypt_aes_context(AESContext* context, EVP_PKEY* privateKey, const uint8_t* in_buffer, size_t in_size, size_t* out_size) {
   EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(privateKey, nullptr);
   if (!ctx || EVP_PKEY_decrypt_init(ctx) <= 0) {
     _logger->error("Error initializing decryption context.");

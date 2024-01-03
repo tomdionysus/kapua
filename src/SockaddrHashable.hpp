@@ -55,11 +55,11 @@ class SockaddrHashable : public sockaddr_in {
   }
 
   // Friend declaration for custom hash function
-  friend struct SockaddrHashableer;
+  friend struct SockaddrHashableHasher;
 };
 
 // Custom hash function
-struct SockaddrHashableer {
+struct SockaddrHashableHasher {
   std::size_t operator()(const SockaddrHashable& sockAddrHash) const {
     std::size_t seed = 0;
 
@@ -76,7 +76,7 @@ namespace std {
 template <>
 struct hash<SockaddrHashable> {
   std::size_t operator()(const SockaddrHashable& sockAddrHash) const {
-    SockaddrHashableer hasher;
+    SockaddrHashableHasher hasher;
     return hasher(sockAddrHash);
   }
 };
