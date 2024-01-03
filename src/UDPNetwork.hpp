@@ -14,11 +14,11 @@
 #include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
-#include <memory>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -33,6 +33,7 @@
 #include "Kapua.hpp"
 #include "Logger.hpp"
 #include "Protocol.hpp"
+#include "RSA.hpp"
 
 namespace Kapua {
 class UDPNetwork {
@@ -48,11 +49,11 @@ class UDPNetwork {
   void _main_loop();
   void _broadcast();
   ssize_t _receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr);
-  ssize_t _send(const char* buffer, size_t len, const sockaddr_in& client_addr);
+  bool _send(Node* node, std::shared_ptr<Packet> pkt, const sockaddr_in& addr);
   bool _shutdown();
 
-  bool _aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext);
-  bool _aes_decrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext);
+  bool _aes_encrypt(AESContext& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext);
+  bool _aes_decrypt(AESContext& context, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext);
 
   void _process_packet(Node* node, std::shared_ptr<Packet> packet);
 

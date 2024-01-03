@@ -120,7 +120,7 @@ void UDPNetwork::_main_loop() {
     if (!pkt) pkt = std::make_shared<Packet>();
 
     // Receive if any
-    ssize_t len = _receive(reinterpret_cast<char*>(pkt.get()), 65535, from_addr);
+    ssize_t len = _receive(reinterpret_cast<char*>(pkt.get()), KAPUA_MAX_PACKET_SIZE, from_addr);
     if (len < 0) {
       _logger->error("Server receive error: " + std::string(strerror(errno)));
     } else if (len > 0) {
@@ -152,7 +152,7 @@ void UDPNetwork::_main_loop() {
           if (!node) {
             node = _core->add_node(pkt->from_id, from_addr);
             _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
-          } 
+          }
           _process_packet(node, pkt);
         }
       }
@@ -181,14 +181,19 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
   // _logger->error("Processing Packet");
 
   node->update_last_contact();
+
+  // If the node is just initialised, request its public key
+  if (node->state == Node::State::Initialised) {
+  }
+
+  switch (pkt->type) {
+    case Packet::Ping:
+      break;
+  }
 }
 
 void UDPNetwork::_broadcast() {
-  std::unique_ptr<Packet> pkt = std::make_unique<Packet>();
-
-  pkt->from_id = _core->get_my_id();
-  pkt->to_id = KAPUA_ID_BROADCAST;
-  pkt->length = 0;
+  std::shared_ptr<Packet> pkt = std::make_shared<Packet>(Packet::Discovery, _core->get_my_id(), KAPUA_ID_BROADCAST);
 
   // The broadcast address
   struct sockaddr_in broadcast_addr;
@@ -199,10 +204,8 @@ void UDPNetwork::_broadcast() {
 
   // Do the send
   // _logger->debug("Discovery broadcast...");
-  ssize_t res = _send(reinterpret_cast<char*>(pkt.get()), sizeof(Packet), broadcast_addr);
-
-  if (res == -1) {
-    _logger->error("Discovery broadcast error: " + std::string(strerror(errno)));
+  if (!_send(nullptr, pkt, broadcast_addr)) {
+    _logger->error("Discovery broadcast error");
   }
 }
 
@@ -225,8 +228,18 @@ ssize_t UDPNetwork::_receive(char* buffer, size_t buffer_size, sockaddr_in& clie
   }
 }
 
-ssize_t UDPNetwork::_send(const char* buffer, size_t len, const sockaddr_in& client_addr) {
-  return sendto(_client_socket_fd, buffer, len, 0, (const struct sockaddr*)&client_addr, sizeof(client_addr));
+bool UDPNetwork::_send(Node* node, std::shared_ptr<Packet> pkt, const sockaddr_in& addr) {
+  uint8_t crypt_buffer[KAPUA_MAX_PACKET_SIZE];
+  uint8_t* buffer = reinterpret_cast<uint8_t*>(pkt.get());
+  if (node != nullptr && node->state >= Node::State::Connected) {
+    if (!_aes_encrypt(node->aes_context, buffer, KAPUA_HEADER_SIZE + pkt->length, crypt_buffer)) {
+      _logger->error("Error while encrypting packet");
+      return false;
+    } else {
+      buffer = crypt_buffer;
+    }
+  }
+  return sendto(_client_socket_fd, buffer, KAPUA_HEADER_SIZE + pkt->length, 0, (const struct sockaddr*)&addr, sizeof(addr)) == KAPUA_HEADER_SIZE + pkt->length;
 }
 
 bool UDPNetwork::_shutdown() {
@@ -261,7 +274,7 @@ bool UDPNetwork::_shutdown() {
 // AES CBC functions
 
 // AES encryption and decryption functions
-bool UDPNetwork::_aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext) {
+bool UDPNetwork::_aes_encrypt(AESContext& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext) {
   EVP_CIPHER_CTX* ctx;
   int len;
   int ciphertext_len;
@@ -270,7 +283,7 @@ bool UDPNetwork::_aes_encrypt(const unsigned char* key, const unsigned char* iv,
   if (!(ctx = EVP_CIPHER_CTX_new())) return false;
 
   // Initialize the encryption operation
-  if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
+  if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, context.key, context.iv) != 1) {
     EVP_CIPHER_CTX_free(ctx);
     return false;
   }
@@ -295,7 +308,7 @@ bool UDPNetwork::_aes_encrypt(const unsigned char* key, const unsigned char* iv,
   return true;
 }
 
-bool UDPNetwork::_aes_decrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext) {
+bool UDPNetwork::_aes_decrypt(AESContext& context, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext) {
   EVP_CIPHER_CTX* ctx;
   int len;
   int plaintext_len;
@@ -304,7 +317,7 @@ bool UDPNetwork::_aes_decrypt(const unsigned char* key, const unsigned char* iv,
   if (!(ctx = EVP_CIPHER_CTX_new())) return false;
 
   // Initialize the decryption operation
-  if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, key, iv) != 1) {
+  if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, context.key, context.iv) != 1) {
     EVP_CIPHER_CTX_free(ctx);
     return false;
   }

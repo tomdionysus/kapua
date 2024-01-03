@@ -21,8 +21,8 @@ struct KeyPair {
 };
 
 struct AESContext {
-  uint8_t iv[32];           // 256-bit Initialization Vector
-  uint8_t session_key[32];  // 256-bit Session Key
+  uint8_t iv[32];   // 256-bit Initialization Vector
+  uint8_t key[32];  // 256-bit Session Key
 };
 
 class RSA {

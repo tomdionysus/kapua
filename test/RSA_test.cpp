@@ -31,7 +31,7 @@ class RSATest : public ::testing::Test {
   AESContext generate_random_aes_context() {
     AESContext context;
     RAND_bytes(context.iv, sizeof(context.iv));
-    RAND_bytes(context.session_key, sizeof(context.session_key));
+    RAND_bytes(context.key, sizeof(context.key));
     return context;
   }
 

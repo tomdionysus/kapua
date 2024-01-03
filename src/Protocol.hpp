@@ -21,12 +21,14 @@
 #endif
 
 #include "Kapua.hpp"
+#include "RSA.hpp"
 
 namespace Kapua {
 
 #define KAPUA_MAX_PACKET_SIZE 1450
 #define KAPUA_ID_GROUP 0xFFFFFFFFFFFFFF01
 #define KAPUA_ID_BROADCAST 0xFFFFFFFFFFFFFFFF
+#define KAPUA_ID_NULL 0x0000000000000000
 
 typedef struct Peer {
   uint64_t id;
@@ -37,9 +39,11 @@ typedef struct Peer {
 struct Packet {
   enum PacketType : uint16_t {
     Ping,
-    Pong,
-    PublicKey,
+    PublicKeyRequest,
+    PublicKeyReply,
     EncryptionContext,
+
+    Discovery = 0xFFFF,
   };
 
   // --- This is the start of the header
@@ -61,20 +65,48 @@ struct Packet {
 
   uint8_t data[KAPUA_MAX_PACKET_SIZE - KAPUA_HEADER_SIZE];
 
+  // Methods
+
   Packet() {
     std::memcpy(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size());
     version = KAPUA_VERSION;
+    length = 0;
   }
 
+  Packet(PacketType pType, uint64_t fromId) : Packet() {
+    type = pType;
+    from_id = fromId;
+    to_id = KAPUA_ID_BROADCAST;
+  }
+
+  Packet(PacketType pType, uint64_t fromId, uint64_t toId) : Packet(pType, fromId) { to_id = toId; }
+
+  Packet(PacketType pType, uint64_t fromId, uint64_t toId, uint64_t requestId) : Packet(pType, fromId, toId) { request_id = requestId; }
+
   bool check_magic_valid() { return std::memcmp(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size()) == 0; }
+
   bool check_version_valid(bool strict = false) {
     if (version.major != KAPUA_VERSION.major) return false;
     if (strict && version.minor > KAPUA_VERSION.minor) return false;
     return true;
   }
-  std::string get_version_string() { return std::to_string(version.major) + "." + std::to_string(version.minor) + "." + std::to_string(version.patch); }
-};
 
+  bool is_reply() { return request_id != KAPUA_ID_NULL; }
+
+  std::string get_version_string() { return std::to_string(version.major) + "." + std::to_string(version.minor) + "." + std::to_string(version.patch); }
+
+  // Packet PublicKeyReply
+  void write_public_key(KeyPair& key_pair) {
+    length = sizeof(KeyPair::publicKey);
+    std::memcpy(&data, &key_pair.publicKey, length);
+  }
+
+  bool read_public_key(KeyPair& key_pair) {
+    if (length != sizeof(KeyPair::publicKey)) return false;
+    std::memcpy(&key_pair.publicKey, &data, length);
+    return true;
+  }
+};
 #pragma pack(pop)
 
 }  // namespace Kapua
