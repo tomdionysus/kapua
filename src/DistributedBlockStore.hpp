@@ -6,11 +6,11 @@
 //
 #pragma once
 
+#include <cstdint>
 #include <set>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <cstdint>
 
 namespace Kapua {
 

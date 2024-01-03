@@ -17,7 +17,15 @@ Core ::Core(Logger* logger, Config* config) {
   _config = config;
 }
 
-Core ::~Core() { _logger->debug("Stopped"); }
+Core ::~Core() {
+  // Free all Nodes
+  for (const auto& pair : _nodes) {
+    uint64_t key = pair.first;
+    delete pair.second;
+  }
+
+  _logger->debug("Stopped");
+}
 
 bool Core::start() {
   _logger->debug("Starting...");
@@ -26,20 +34,33 @@ bool Core::start() {
   return true;
 }
 
-void Core::add_node(uint64_t id, Node* node) {
+void Core::add_node(uint64_t id, sockaddr_in addr) {
   std::lock_guard<std::mutex> lock(_nodes_mutex);
+  Node* node = new Node(id, addr);
   _nodes.insert({id, node});
+  _nodes_by_addr.insert({(SockaddrHashable)addr, node});
 }
 
 void Core::remove_node(uint64_t id) {
   std::lock_guard<std::mutex> lock(_nodes_mutex);
+  Node* node = find_node(id);
+  if (!node) return;
+  _nodes_by_addr.erase(node->addr);
   _nodes.erase(id);
+  delete node;
 }
 
 Node* Core::find_node(uint64_t id) {
   std::lock_guard<std::mutex> lock(_nodes_mutex);
   auto search = _nodes.find(id);
   if (search != _nodes.end()) return search->second;
+  return nullptr;
+}
+
+Node* Core::find_node(sockaddr_in addr) {
+  std::lock_guard<std::mutex> lock(_nodes_mutex);
+  auto search = _nodes_by_addr.find(addr);
+  if (search != _nodes_by_addr.end()) return search->second;
   return nullptr;
 }
 

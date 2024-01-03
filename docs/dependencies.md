@@ -19,6 +19,7 @@ kapua requires OpenSSL 3.2.0+, which as of Jan 2024 must be build from source:
 ```bash
 wget https://github.com/openssl/openssl/releases/download/openssl-3.2.0/openssl-3.2.0.tar.gz
 tar -xzf openssl-3.2.0.tar.gz
+cd openssl-3.2.0
 ./config --prefix=/usr
 make
 make install

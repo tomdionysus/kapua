@@ -7,6 +7,7 @@
 #include "UDPNetwork.hpp"
 
 #include "Protocol.hpp"
+#include "Util.hpp"
 
 namespace Kapua {
 
@@ -96,8 +97,10 @@ bool UDPNetwork::_listen(int port) {
 }
 
 void UDPNetwork::_main_loop() {
-  char buffer[65536];
   sockaddr_in from_addr;
+
+  // Standby Buffer
+  std::shared_ptr<Packet> pkt = nullptr;
 
   // Set state _running true
   _running = true;
@@ -113,8 +116,11 @@ void UDPNetwork::_main_loop() {
   auto last_broadcast_time = std::chrono::steady_clock::now() - std::chrono::hours(24);
 
   while (_running) {
+    // If there's no standby buffer, allocate one
+    if(!pkt) pkt = std::make_shared<Packet>();
+
     // Receive if any
-    ssize_t len = _receive((char*)(&buffer), 65536, from_addr);
+    ssize_t len = _receive(reinterpret_cast<char*>(pkt.get()), 65535, from_addr);
     if (len < 0) {
       _logger->error("Server receive error: " + std::string(strerror(errno)));
     } else if (len > 0) {
@@ -127,29 +133,43 @@ void UDPNetwork::_main_loop() {
         _logger->debug("Non-Kapua packet received (too short)");
       } else {
         // Valid magic Number?
-        Packet* pk = (Packet*)buffer;
-        if (!pk->isMagicValid()) {
+        if (!pkt->isMagicValid()) {
           std::string bad_magic = [&] {
             std::ostringstream oss;
-            oss << "0x" << std::setfill('0') << std::setw(10) << std::hex << pk->magic;
+            oss << "0x" << std::setfill('0') << std::setw(10) << std::hex << pkt->magic;
             return oss.str();
           }();
           _logger->debug("Non-Kapua packet received (bad magic number " + bad_magic + ")");
-        } else if (!pk->isVersionValid()) {
+        } else if (!pkt->isVersionValid()) {
           // TODO: Setting for strict version checking
           // Version
-          _logger->debug("Packet received with incompatible version (" + pk->getVersionString() + ")");
-        } else if (pk->from_id == _core->get_my_id()) {
-          // Is from us?
-          _logger->debug("Packet received from own id");
+          _logger->debug("Packet received with incompatible version (" + pkt->getVersionString() + ")");
+        } else if (pkt->from_id == _core->get_my_id()) {
+          // Ignore packets from us
         } else {
-          // TODO: Check if registered, register new ID
-          std::string from_id_hex = [&] {
-            std::ostringstream oss;
-            oss << "0x" << std::setfill('0') << std::setw(16) << std::hex << pk->from_id;
-            return oss.str();
-          }();
-          _logger->info("New node detected, ID: " + from_id_hex + " (" + from_addr_str + ")");
+          // Check ID does not exist
+          Node* node = _core->find_node(pkt->from_id);
+          if (!node) {
+            // Check ID does not exist
+            node = _core->find_node(from_addr);
+            if (node) {
+              // TODO: Supply more info here
+              _logger->warn("Packet received from known addr/port with incorrect ID");
+            } else {
+              _core->add_node(pkt->from_id, from_addr);
+              _logger->info("New node detected, ID: " + to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
+              _process_packet(node, pkt);
+              pkt = nullptr;
+            }
+          } else {
+            if ((SockaddrHashable)from_addr != node->addr) {
+              // TODO: Supply more info here
+              _logger->warn("Packet received with known ID from incorrect addr/port");
+            } else {
+              _process_packet(node, pkt);
+              pkt = nullptr;
+            }
+          }
         }
       }
     }
@@ -173,8 +193,14 @@ void UDPNetwork::_main_loop() {
   _logger->debug("Stopped");
 }
 
+void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
+ _logger->error("Processing Packet");
+
+  node->update_last_contact();
+}
+
 void UDPNetwork::_broadcast() {
-  auto pkt = std::unique_ptr<Packet>(new Packet());
+  std::unique_ptr<Packet> pkt = std::make_unique<Packet>();
 
   pkt->from_id = _core->get_my_id();
   pkt->to_id = KAPUA_ID_BROADCAST;

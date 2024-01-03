@@ -8,7 +8,9 @@
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <sys/time.h>
 
+#include <atomic>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -16,8 +18,6 @@
 #include <sstream>
 #include <string>
 #include <thread>
-#include <atomic>
-#include <sys/time.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -31,6 +31,7 @@
 #include "Core.hpp"
 #include "Kapua.hpp"
 #include "Logger.hpp"
+#include "Protocol.hpp"
 
 namespace Kapua {
 class UDPNetwork {
@@ -40,6 +41,7 @@ class UDPNetwork {
 
   bool start(int port);
   bool stop();
+
 
  protected:
   bool _listen(int port);
@@ -51,6 +53,8 @@ class UDPNetwork {
 
   bool _aes_encrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext);
   bool _aes_decrypt(const unsigned char* key, const unsigned char* iv, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext);
+
+  void _process_packet(Node* node, std::shared_ptr<Packet> packet);
 
   Core* _core;
 

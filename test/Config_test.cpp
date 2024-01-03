@@ -258,4 +258,4 @@ TEST_F(ConfigTest, InvalidHexPrefix) {
   EXPECT_EQ(result, Config::ParseResult::InvalidFormat);
 }
 
-}
+}  // namespace KapuaTest

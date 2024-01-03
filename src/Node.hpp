@@ -6,21 +6,35 @@
 //
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <vector>
 
 #include "Node.hpp"
+#include "SockaddrHashable.hpp"
 
 namespace Kapua {
 
 class Node {
  public:
-  Node(uint64_t id);
-  ~Node();
+  Node(uint64_t pid) {
+    id = pid;
+    addr = sockaddr_in();
+  }
+  Node(uint64_t pid, sockaddr_in paddr) {
+    id = pid;
+    addr = paddr;
+  }
+  ~Node() {}
+
+  void update_last_contact() { last_contact_time = std::chrono::steady_clock::now(); }
+
+  SockaddrHashable addr;
+  uint64_t id;
+
+  std::chrono::time_point<std::chrono::steady_clock> last_contact_time;
 
  protected:
-  uint64_t _id;
-
   std::vector<uint64_t> groups;
 };
 

@@ -8,8 +8,8 @@
 
 #include <array>
 #include <cstdint>
-#include <string>
 #include <cstring>
+#include <string>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -50,7 +50,7 @@ struct Packet {
   uint16_t ttl = 32;
   uint16_t length;
 
-  uint8_t data[KAPUA_MAX_PACKET_SIZE];
+  uint8_t data[KAPUA_MAX_PACKET_SIZE-38];
 
   Packet() {
     std::memcpy(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size());
