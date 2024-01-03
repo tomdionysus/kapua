@@ -21,5 +21,13 @@ trackers:
     - nzl.tracker.kapua.org.nz
     - tracker.blackraven.co.nz
 
+memcached:
+  enable: true
+  ip4_address: 0.0.0.0
+  port: 11211
+  extensions: true
+  connection_limit: 20
+  inactivity_timeout: 30s
+  
 logging:
   level: debug

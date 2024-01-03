@@ -53,7 +53,7 @@ int main(int ac, char** av) {
   }
 
   stdlog.debug("Starting...");
-  if(!local_discover.start(ntohs(config.server_address.sin_port))) {
+  if(!local_discover.start(ntohs(config.server_ip4_sockaddr.sin_port))) {
     stdlog.error("local discover start failed");
     return EXIT_FAILURE;
   }

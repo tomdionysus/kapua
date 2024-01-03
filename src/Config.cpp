@@ -6,6 +6,7 @@
 #include <boost/program_options.hpp>
 
 #include "Logger.hpp"
+#include "Util.hpp"
 
 using namespace std;
 namespace po = boost::program_options;
@@ -16,9 +17,9 @@ Config::Config(Logger* logger) {
   _logger = new ScopedLogger("Configuration", logger);
 
   // Defaults
-  server_address.sin_family = AF_INET;
-  inet_pton(AF_INET, "0.0.0.0", &server_address.sin_addr);
-  server_address.sin_port = htons(KAPUA_DEFAULT_PORT);
+  server_ip4_sockaddr.sin_family = AF_INET;
+  inet_pton(AF_INET, "0.0.0.0", &server_ip4_sockaddr.sin_addr);
+  server_ip4_sockaddr.sin_port = htons(KAPUA_DEFAULT_PORT);
 }
 
 Config::~Config() { delete _logger; }
@@ -26,7 +27,7 @@ Config::~Config() { delete _logger; }
 bool Config::load_yaml(std::string filename) {
   _logger->info("Loading config file " + filename);
 
-  std::string source = "yaml";
+  const std::string source = "yaml";
 
   try {
     YAML::Node config = YAML::LoadFile(filename);
@@ -36,13 +37,28 @@ bool Config::load_yaml(std::string filename) {
       return false;
     }
 
+    bool ok = true;
+
     // server.*
-    if (config["server"]["id"] && !parse_server_id(source, config["server"]["id"].as<std::string>())) return false;
-    if (config["server"]["ip4_address"] && !parse_server_address(source, config["server"]["ip4_address"].as<std::string>())) return false;
-    if (config["server"]["port"] && !parse_server_port(source, config["server"]["port"].as<uint16_t>())) return false;
+    if (config["server"]["id"]) ok &= parse_hex_uint64(source, "server.id", config["server"]["id"].as<std::string>(), &server_id);
+    if (config["server"]["ip4_address"])
+      ok &= parse_ipv4(source, "server.ip4_address", config["server"]["ip4_address"].as<std::string>(), &server_ip4_sockaddr.sin_addr);
+    if (config["server"]["port"]) ok &= parse_port(source, "server.port", config["server"]["port"].as<std::string>(), &server_ip4_sockaddr.sin_port);
 
     // local_discovery.*
-    if (config["local_discovery"]["enable"] && !parse_local_discovery_enable(source, config["local_discovery"]["enable"].as<std::string>())) return false;
+    if (config["local_discovery"]["enable"])
+      ok &= parse_bool(source, "local_discovery.enable", config["local_discovery"]["enable"].as<std::string>(), &local_discovery_enable);
+    // if (config["local_discovery"]["interval"])
+    //   ok &= parse_duration(source, "local_discovery.interval", config["local_discovery"]["interval"].as<std::string>(), false, &local_discovery_interval_ms);
+
+    // memcache
+    if (config["memcache"]["enable"]) ok &= parse_bool(source, "memcache.enable", config["memcache"]["enable"].as<std::string>(), &memcached_enable);
+    if (config["memcache"]["port"]) ok &= parse_port(source, "memcache.port", config["memcache"]["port"].as<std::string>(), &memcached_ip4_sockaddr.sin_port);
+
+    if (!ok) {
+      _logger->error(std::string("Errors while parsing parsing configuration YAML"));
+      return false;
+    }
 
   } catch (const YAML::BadFile& e) {
     _logger->error("Cannot open file " + filename + " (" + e.msg + ")");
@@ -61,12 +77,12 @@ bool Config::load_yaml(std::string filename) {
 }
 
 bool Config::load_cmd_line(int ac, char** av) {
-  std::string source = "cmd";
+  const std::string source = "cmd";
 
   try {
     po::options_description desc("Kapua v" + KAPUA_VERSION_STRING + "\nOptions:");
     desc.add_options()("help", "Print this help")("server.id", po::value<std::string>(), "server id, 64-bit hex")(
-        "server.address", po::value<std::string>(), "server ipv4 address")("server.port", po::value<uint16_t>(), "server ipv4 port")(
+        "server.ip4_address", po::value<std::string>(), "server ipv4 address")("server.port", po::value<uint16_t>(), "server ipv4 port")(
         "local_discovery.enable", po::value<std::string>(), "enable UDP local discovery");
 
     po::variables_map vm;
@@ -78,13 +94,28 @@ bool Config::load_cmd_line(int ac, char** av) {
       return false;
     }
 
-    // server_address
-    if (vm.count("server.id") && !parse_server_id(source, vm["server.id"].as<std::string>())) return false;
-    if (vm.count("server.address") && !parse_server_address(source, vm["server.address"].as<std::string>())) return false;
-    if (vm.count("server.port") && !parse_server_port(source, vm["server.port"].as<uint16_t>())) return false;
+    bool ok = true;
+
+    // server_ip4_sockaddr
+    if (vm.count("server.id")) ok &= parse_hex_uint64(source, "server.id", vm["server.id"].as<std::string>(), &server_id);
+    if (vm.count("server.ip4_address"))
+      ok &= parse_ipv4(source, "server.ip4_address", vm["server.ip4_address"].as<std::string>(), &server_ip4_sockaddr.sin_addr);
+    if (vm.count("server.port")) ok &= parse_port(source, "server.port", vm["server.port"].as<std::string>(), &server_ip4_sockaddr.sin_port);
 
     // local_discovery
-    if (vm.count("local_discovery.enable") && !parse_local_discovery_enable(source, vm["local_discovery.enable"].as<std::string>())) return false;
+    if (vm.count("local_discovery.enable"))
+      ok &= parse_bool(source, "local_discovery.enable", vm["local_discovery.enable"].as<std::string>(), &local_discovery_enable);
+
+    // memcache
+    if (vm.count("memcache.enable")) ok &= parse_bool(source, "memcache.enable", vm["memcache.enable"].as<std::string>(), &memcached_enable);
+    if (vm.count("memcache.ip4_address"))
+      ok &= parse_ipv4(source, "memcache.ip4_address", vm["memcache.ip4_address"].as<std::string>(), &memcached_ip4_sockaddr.sin_addr);
+    if (vm.count("memcache.port")) ok &= parse_port(source, "memcache.port", vm["memcache.port"].as<std::string>(), &memcached_ip4_sockaddr.sin_port);
+
+    if (!ok) {
+      _logger->error(std::string("Errors while parsing command line options"));
+      return false;
+    }
 
   } catch (exception& e) {
     _logger->error(std::string("Error while parsing command line options: ") + e.what());
@@ -101,7 +132,7 @@ bool Config::dump() {
   return true;
 }
 
-Config::ParseResult Config::parse_duration(const std::string& input, int64_t& milliseconds) {
+bool Config::parse_duration(const std::string& source, const std::string& input, const std::string& name, bool allowNegative, int32_t* ms) {
   std::vector<std::pair<double, char>> components;  // Pairs of value and unit
   size_t pos = 0;
   size_t len = input.length();
@@ -125,7 +156,8 @@ Config::ParseResult Config::parse_duration(const std::string& input, int64_t& mi
     while (pos < len && (isdigit(input[pos]) || input[pos] == '.')) {
       if (input[pos] == '.') {
         if (hasFraction) {  // Second decimal point found - invalid format
-          return ParseResult::InvalidFormat;
+          _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - decimals must be well formed");
+          return false;
         }
         hasFraction = true;
         fractionStarted = true;
@@ -146,13 +178,15 @@ Config::ParseResult Config::parse_duration(const std::string& input, int64_t& mi
 
     // Validate unit
     if ((unit != 'h' && unit != 'm' && unit != 's' && unit != 'u') || (unit == '\0' && pos < len)) {
-      return ParseResult::InvalidUnit;
+      _logger->error("(" + source + ") " + name + " - invalid unit (" + unit + "): " + input + " - must be 'h','m','s','u'");
+      return false;
     }
 
     // Validate the order of units
     if ((unit == 'h' && lastUnit != 'u') || (unit == 'm' && lastUnit != 'u' && lastUnit != 'h') ||
         (unit == 's' && lastUnit != 'u' && lastUnit != 'h' && lastUnit != 'm') || (unit == 'u' && lastUnit != 'u')) {
-      return ParseResult::InvalidFormat;
+      _logger->error("(" + source + ") " + name + " - invalid unit  order: " + input + " - must be 'h' > 'm' > 's' > 'u'");
+      return false;
     }
 
     lastUnit = unit;  // Update the last seen unit
@@ -163,42 +197,54 @@ Config::ParseResult Config::parse_duration(const std::string& input, int64_t& mi
   // Ensure the last element is the only fraction
   for (size_t i = 0; i < components.size() - 1; ++i) {
     if (components[i].first != static_cast<int64_t>(components[i].first)) {
-      return ParseResult::InvalidFormat;
+      _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be NhNmNsNu");
+      return false;
     }
   }
 
-  milliseconds = 0;
+  int32_t milliseconds = 0;
+
   for (const auto& component : components) {
     switch (component.second) {
       case 'h':
-        milliseconds += static_cast<int64_t>(component.first * 3600000);
+        milliseconds += static_cast<int32_t>(component.first * 3600000);
         break;
       case 'm':
-        milliseconds += static_cast<int64_t>(component.first * 60000);
+        milliseconds += static_cast<int32_t>(component.first * 60000);
         break;
       case 's':
-        milliseconds += static_cast<int64_t>(component.first * 1000);
+        milliseconds += static_cast<int32_t>(component.first * 1000);
         break;
       case 'u':
-        milliseconds += static_cast<int64_t>(component.first);
+        milliseconds += static_cast<int32_t>(component.first);
         break;
     }
   }
 
   // Apply negative sign if needed
-  if (isNegative) {
+  if (isNegative && allowNegative) {
     milliseconds = -milliseconds;
+  } else {
+    _logger->error("(" + source + ") " + name + " - invalid value: " + input + " - must be positive");
+    return false;
   }
 
-  return ParseResult::Success;
+  *ms = milliseconds;
+
+  return true;
 }
 
-Config::ParseResult Config::parse_ipv4(const std::string& input, in_addr* addr) {
-  if (!inet_pton(AF_INET, input.c_str(), addr)) return Config::ParseResult::InvalidFormat;
-  return Config::ParseResult::Success;
+bool Config::parse_ipv4(const std::string& source, const std::string& name, const std::string& input, in_addr* addr) {
+  if (!inet_pton(AF_INET, input.c_str(), addr)) {
+    _logger->error("(" + source + ") " + name + " " + input + " - must be a valid ipv4 address");
+    return false;
+  }
+
+  _logger->debug("(" + source + ") " + name + " = " + input);
+  return true;
 }
 
-Config::ParseResult Config::parse_bool(const std::string& input, bool* result) {
+bool Config::parse_bool(const std::string& source, const std::string& name, const std::string& input, bool* result) {
   std::string parsedInput = input;
   boost::algorithm::to_lower(parsedInput);
   if (parsedInput == "true" || parsedInput == "t" || parsedInput == "yes") {
@@ -206,33 +252,35 @@ Config::ParseResult Config::parse_bool(const std::string& input, bool* result) {
   } else if (parsedInput == "false" || parsedInput == "f" || parsedInput == "no") {
     *result = false;
   } else {
-    return ParseResult::InvalidFormat;
+    _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be 'true','t','yes','false','f','no'");
+    return false;
   }
-  return ParseResult::Success;
+  _logger->debug("(" + source + ") " + name + " = " + std::string(*result ? "true" : "false"));
+  return true;
 }
 
-Config::ParseResult Config::parse_log_level(const std::string& input, LogLevel_t* level) {
+bool Config::parse_log_level(const std::string& source, const std::string& name, const std::string& input, LogLevel_t* level) {
   std::string lowercaseInput = input;
   boost::algorithm::to_lower(lowercaseInput);
 
   if (lowercaseInput == "error") {
     *level = LOG_LEVEL_ERROR;
-    return ParseResult::Success;
   } else if (lowercaseInput == "warn" || lowercaseInput == "warning") {
     *level = LOG_LEVEL_WARN;
-    return ParseResult::Success;
   } else if (lowercaseInput == "info") {
     *level = LOG_LEVEL_INFO;
-    return ParseResult::Success;
   } else if (lowercaseInput == "debug") {
     *level = LOG_LEVEL_DEBUG;
-    return ParseResult::Success;
   } else {
-    return ParseResult::InvalidFormat;
+    _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be 'true','t','yes','false','f','no'");
+    return true;
   }
+
+  _logger->debug("(" + source + ") " + name + " = " + lowercaseInput);
+  return true;
 }
 
-Config::ParseResult Config::parse_hex_uint64(const std::string& input, uint64_t& value) {
+bool Config::parse_hex_uint64(const std::string& source, const std::string& name, const std::string& input, uint64_t* value) {
   std::string hexInput = input;
 
   // Remove "0x" prefix if present
@@ -245,60 +293,46 @@ Config::ParseResult Config::parse_hex_uint64(const std::string& input, uint64_t&
 
   // Check if the string has exactly 16 hexadecimal characters
   if (hexInput.size() != 16 || !boost::algorithm::all(hexInput, ::isxdigit)) {
-    return ParseResult::InvalidFormat;
+    _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be a valid 64-bit hex number");
+    return false;
   }
 
   try {
     // Use std::stoull to convert the hexadecimal string to uint64_t
-    value = std::stoull(hexInput, nullptr, 16);
-    return ParseResult::Success;
+    *value = std::stoull(hexInput, nullptr, 16);
   } catch (const std::exception& e) {
-    // Handle conversion error
-    return ParseResult::InvalidFormat;
-  }
-}
-
-bool Config::parse_server_id(const std::string& source, const std::string& input) {
-  uint64_t id;
-
-  if (parse_hex_uint64(input, id) != ParseResult::Success) {
-    _logger->error("(" + source + ") server.id - invalid format: " + input + " - must be a valid 64-bit hex number");
+    _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be a valid 64-bit hex number");
     return false;
   }
-  server_id = id;
-  std::string hexId = [id] {
-    std::stringstream stream;
-    stream << std::hex << std::setw(16) << std::setfill('0') << id;
-    return stream.str();
-  }();
-  _logger->debug("(" + source + ") server.id = 0x" + hexId);
+
+  _logger->debug("(" + source + ") " + name + " = 0x" + Util::to_hex64_str(*value));
   return true;
 }
 
-bool Config::parse_server_address(const std::string& source, const std::string& input) {
-  if (parse_ipv4(input, &server_address.sin_addr) != ParseResult::Success) {
-    _logger->error("(" + source + ") server.address - invalid format: " + input + " - must be a valid ipv4 address");
+bool Config::parse_uint16(const std::string& source, const std::string& name, const std::string& input, uint16_t* value) {
+  int num;
+  try {
+    // Convert string to int
+    num = std::stoi(input);
+
+    // Cast to uint16_t
+    *value = static_cast<uint16_t>(num);
+  } catch (const std::invalid_argument& ia) {
+    _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be a valid 16-bit number");
+    return false;
+  } catch (const std::out_of_range& oor) {
+    _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be 0-65535");
     return false;
   }
-  _logger->debug("(" + source + ") server.address = " + input);
-  server_address.sin_port = htons(KAPUA_DEFAULT_PORT);
+
+  _logger->debug("(" + source + ") " + name + " = " + std::to_string(num));
   return true;
 }
 
-bool Config::parse_server_port(const std::string& source, const uint16_t port) {
-  server_address.sin_port = htons(port);
-  _logger->debug("(" + source + ") server.port = " + std::to_string(port));
-  return true;
-}
-
-bool Config::parse_local_discovery_enable(const std::string& source, const std::string& input) {
-  bool enable;
-  if (parse_bool(input, &enable) != ParseResult::Success) {
-    _logger->error("(" + source + ") local_discovery.enable - invalid format: " + input + " - must be 'true','t','yes','false','f','no'");
-    return false;
-  }
-  local_discovery_enable = enable;
-  _logger->debug("(" + source + ") local_discovery.enable = " + std::string(local_discovery_enable ? "true" : "false"));
+bool Config::parse_port(const std::string& source, const std::string& name, const std::string& input, uint16_t* port) {
+  uint16_t pPort;
+  if (!parse_uint16(source, name, input, &pPort)) return false;
+  *port = htons(pPort);
   return true;
 }
 

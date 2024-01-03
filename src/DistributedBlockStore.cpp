@@ -10,6 +10,7 @@
 #include <limits>
 
 namespace Kapua {
+
 DistributedBlockStore::DistributedBlockStore(uint64_t id, const std::vector<uint64_t>& virtualIds, uint64_t capacity) : nodeId(id) {
   for (auto vid : virtualIds) {
     ring.insert(vid);

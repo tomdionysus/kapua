@@ -189,6 +189,15 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
   switch (pkt->type) {
     case Packet::Ping:
       break;
+    case Packet::PublicKeyRequest:
+      break;
+    case Packet::PublicKeyReply:
+      break;
+    case Packet::EncryptionContext:
+      break;
+    default:
+      _logger->warn("Unknown packet type" + std::to_string(pkt->type));
+      break;
   }
 }
 
