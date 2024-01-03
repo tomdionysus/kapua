@@ -27,7 +27,7 @@ add_library(
 	${SOURCES}
 )
 
-find_package(Boost 1.83.0 REQUIRED COMPONENTS thread program_options)
+find_package(Boost 1.82.0 REQUIRED COMPONENTS thread program_options)
 include_directories(${Boost_INCLUDE_DIR})
 target_link_libraries(kapua ${Boost_LIBRARIES})
 
@@ -38,10 +38,6 @@ target_link_libraries(kapua ${OPENSSL_LIBRARIES})
 find_package(YamlCpp REQUIRED)
 include_directories(${YAML_CPP_INCLUDE_DIR})
 target_link_libraries(kapua ${YAML_CPP_LIBRARIES})
-
-find_package(CURL REQUIRED) 
-include_directories(${CURL_INCLUDE_DIR})
-target_link_libraries(kapua ${CURL_LIBRARIES})
 
 # Examples
 project(kapuad CXX C ASM)

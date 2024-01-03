@@ -6,21 +6,7 @@ A fully decentralised storage, compute, database and networking platform, in C++
 
 ### Dependencies:
 
-* [cmake](https://github.com/Kitware/CMake)
-* [curl](https://github.com/curl/curl)
-* [libyaml](https://github.com/yaml/libyaml)
-
-**Debain/Ubuntu/etc**
-
-```sh
-apt-get install cmake curl libyaml
-```
-
-**MacOS**
-
-```sh
-brew install curl yaml-cpp
-```
+Please see [dependencies](docs/dependencies.md) in the docs.
 
 ### Build
 
