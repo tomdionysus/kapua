@@ -31,6 +31,8 @@ int main(int ac, char** av) {
   Kapua::Core core(&stdlog, &config);
   Kapua::UDPNetwork local_discover(&stdlog, &config, &core);
 
+
+
   stdlog.raw("----------------------------");
   stdlog.raw("Kapua v"+Kapua::KAPUA_VERSION_STRING);
   stdlog.raw("----------------------------");
@@ -43,8 +45,10 @@ int main(int ac, char** av) {
   };
 
   if(!config.load_cmd_line(ac,av)) {
-    return EXIT_SUCCESS;
+    return EXIT_FAILURE;
   };
+
+  stdlog.set_log_level(config.logging_level);
 
   stdlog.info("Starting...");
   if(!core.start()) {

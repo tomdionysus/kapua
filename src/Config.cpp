@@ -39,6 +39,13 @@ bool Config::load_yaml(std::string filename) {
 
     bool ok = true;
 
+    // logging
+    if (config["logging"]["level"]) ok &= parse_log_level(source, "logging.level", config["logging"]["level"].as<std::string>(), &logging_level);
+    if(ok) {
+      // Special case. The logging level applies immediately.
+      _logger->set_log_level(logging_level);
+    }
+    
     // server.*
     if (config["server"]["id"]) ok &= parse_hex_uint64(source, "server.id", config["server"]["id"].as<std::string>(), &server_id);
     if (config["server"]["ip4_address"])
@@ -54,6 +61,7 @@ bool Config::load_yaml(std::string filename) {
     // memcache
     if (config["memcache"]["enable"]) ok &= parse_bool(source, "memcache.enable", config["memcache"]["enable"].as<std::string>(), &memcached_enable);
     if (config["memcache"]["port"]) ok &= parse_port(source, "memcache.port", config["memcache"]["port"].as<std::string>(), &memcached_ip4_sockaddr.sin_port);
+
 
     if (!ok) {
       _logger->error(std::string("Errors while parsing parsing configuration YAML"));
@@ -81,9 +89,18 @@ bool Config::load_cmd_line(int ac, char** av) {
 
   try {
     po::options_description desc("Kapua v" + KAPUA_VERSION_STRING + "\nOptions:");
-    desc.add_options()("help", "Print this help")("server.id", po::value<std::string>(), "server id, 64-bit hex")(
-        "server.ip4_address", po::value<std::string>(), "server ipv4 address")("server.port", po::value<uint16_t>(), "server ipv4 port")(
-        "local_discovery.enable", po::value<std::string>(), "enable UDP local discovery");
+
+    // clang-format off
+    
+    desc.add_options()
+      ("help", "Print this help")
+      ("server.id", po::value<std::string>(), "server id, 64-bit hex")
+      ("server.ip4_address", po::value<std::string>(), "server ipv4 address")
+      ("server.port", po::value<uint16_t>(), "server ipv4 port")
+      ("local_discovery.enable", po::value<std::string>(), "enable UDP local discovery")
+      ("logging.level", po::value<std::string>(), "set the logging level [debug,info,warn,error]");
+
+    // clang-format on
 
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -95,6 +112,13 @@ bool Config::load_cmd_line(int ac, char** av) {
     }
 
     bool ok = true;
+
+    // logging
+    if (vm.count("logging.level")) ok &= parse_log_level(source, "logging.level", vm["logging.level"].as<std::string>(), &logging_level);
+    if(ok) {
+      // Special case. The logging level applies immediately.
+      _logger->set_log_level(logging_level);
+    }
 
     // server_ip4_sockaddr
     if (vm.count("server.id")) ok &= parse_hex_uint64(source, "server.id", vm["server.id"].as<std::string>(), &server_id);
@@ -239,7 +263,6 @@ bool Config::parse_log_level(const std::string& source, const std::string& name,
     return true;
   }
 
-  _logger->debug("(" + source + ") " + name + " = " + lowercaseInput);
   return true;
 }
 

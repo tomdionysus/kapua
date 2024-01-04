@@ -103,8 +103,6 @@ void UDPNetwork::_main_loop() {
   // Standby Buffer
   std::shared_ptr<Packet> pkt = nullptr;
 
-  // Set state _running true
-  _running = true;
 
   // Set up listening on the server port
   if (!_listen(_port)) {
@@ -112,6 +110,10 @@ void UDPNetwork::_main_loop() {
     _shutdown();
     return;
   }
+
+  // Set state _running true
+  _running = true;
+  _logger->debug("Started");
 
   // Set this in the past so we immediately do a broadcast
   auto last_broadcast_time = std::chrono::steady_clock::now() - std::chrono::hours(24);

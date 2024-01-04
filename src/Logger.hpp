@@ -29,6 +29,7 @@ class Logger {
   virtual void info(std::string log) = 0;
   virtual void warn(std::string log) = 0;
   virtual void error(std::string log) = 0;
+  virtual void set_log_level(LogLevel_t level) = 0;
 };
 
 class IOStreamLogger : public Logger {
@@ -41,6 +42,7 @@ class IOStreamLogger : public Logger {
   virtual void info(std::string log) override;
   virtual void warn(std::string log) override;
   virtual void error(std::string log) override;
+  virtual void set_log_level(LogLevel_t level) override;
 
  private:
   std::ostream* _output_stream;
@@ -62,6 +64,7 @@ class ScopedLogger : public Logger {
   virtual void info(std::string log) override;
   virtual void warn(std::string log) override;
   virtual void error(std::string log) override;
+  virtual void set_log_level(LogLevel_t level) override;
 
  protected:
   std::string _prefix;
