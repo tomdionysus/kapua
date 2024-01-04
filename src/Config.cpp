@@ -25,8 +25,6 @@ Config::Config(Logger* logger) {
 Config::~Config() { delete _logger; }
 
 bool Config::load_yaml(std::string filename) {
-  _logger->info("Loading config file " + filename);
-
   const std::string source = "yaml";
 
   try {
@@ -93,10 +91,10 @@ bool Config::load_cmd_line(int ac, char** av) {
     
     desc.add_options()
       ("help", "Print this help")
-      ("server.id", po::value<std::string>(), "server id, 64-bit hex")
-      ("server.ip4_address", po::value<std::string>(), "server ipv4 address")
-      ("server.port", po::value<uint16_t>(), "server ipv4 port")
-      ("local_discovery.enable", po::value<std::string>(), "enable UDP local discovery")
+      ("server.id", po::value<std::string>(), "server id, 64-bit hex [0x123456789abcdef0]")
+      ("server.ip4_address", po::value<std::string>(), "server ipv4 address [x.x.x.x]")
+      ("server.port", po::value<uint16_t>(), "server ipv4 port [0-65535]")
+      ("local_discovery.enable", po::value<std::string>(), "enable UDP local discovery [true,false]")
       ("logging.level", po::value<std::string>(), "set the logging level [debug,info,warn,error]");
 
     // clang-format on

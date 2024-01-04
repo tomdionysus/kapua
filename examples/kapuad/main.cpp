@@ -31,13 +31,9 @@ int main(int ac, char** av) {
   Kapua::Core core(&stdlog, &config);
   Kapua::UDPNetwork local_discover(&stdlog, &config, &core);
 
-
-
   stdlog.raw("----------------------------");
   stdlog.raw("Kapua v"+Kapua::KAPUA_VERSION_STRING);
   stdlog.raw("----------------------------");
-
-  stdlog.info("Confguring...");
 
   if (!config.load_yaml("config.yaml")) {
     stdlog.error("Cannot load YAML config");
