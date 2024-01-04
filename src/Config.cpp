@@ -39,10 +39,11 @@ bool Config::load_yaml(std::string filename) {
 
     // logging
     if (config["logging"]["level"]) ok &= parse_log_level(source, "logging.level", config["logging"]["level"].as<std::string>(), &logging_level);
-    if (ok) {
-      // Special case. The logging level applies immediately.
-      _logger->set_log_level(logging_level);
-    }
+    // Special case. The logging level applies immediately.
+    if (ok) _logger->set_log_level(logging_level);
+
+    if (config["logging"]["disable_splash"])
+      ok &= parse_bool(source, "logging.disable_splash", config["logging"]["disable_splash"].as<std::string>(), &logging_disable_splash);
 
     // server.*
     if (config["server"]["id"]) ok &= parse_hex_uint64(source, "server.id", config["server"]["id"].as<std::string>(), &server_id);
@@ -95,7 +96,8 @@ bool Config::load_cmd_line(int ac, char** av) {
       ("server.ip4_address", po::value<std::string>(), "server ipv4 address [x.x.x.x]")
       ("server.port", po::value<uint16_t>(), "server ipv4 port [0-65535]")
       ("local_discovery.enable", po::value<std::string>(), "enable UDP local discovery [true,false]")
-      ("logging.level", po::value<std::string>(), "set the logging level [debug,info,warn,error]");
+      ("logging.level", po::value<std::string>(), "set the logging level [debug,info,warn,error]")
+      ("logging.disable_splash", po::value<std::string>(), "disable the log header splash");
 
     // clang-format on
 
@@ -112,10 +114,10 @@ bool Config::load_cmd_line(int ac, char** av) {
 
     // logging
     if (vm.count("logging.level")) ok &= parse_log_level(source, "logging.level", vm["logging.level"].as<std::string>(), &logging_level);
-    if (ok) {
-      // Special case. The logging level applies immediately.
-      _logger->set_log_level(logging_level);
-    }
+    // Special case. The logging level applies immediately.
+    if (ok) _logger->set_log_level(logging_level);
+    if (vm.count("logging.disable_splash"))
+      ok &= parse_bool(source, "logging.disable_splash", vm["logging.disable_splash"].as<std::string>(), &logging_disable_splash);
 
     // server_ip4_sockaddr
     if (vm.count("server.id")) ok &= parse_hex_uint64(source, "server.id", vm["server.id"].as<std::string>(), &server_id);

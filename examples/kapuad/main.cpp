@@ -4,11 +4,11 @@
 #include <iostream>
 #include <thread>
 
-#include "Kapua.hpp"
 #include "Core.hpp"
-#include "UDPNetwork.hpp"
+#include "Kapua.hpp"
 #include "Logger.hpp"
 #include "Protocol.hpp"
+#include "UDPNetwork.hpp"
 
 using namespace std;
 
@@ -31,29 +31,31 @@ int main(int ac, char** av) {
   Kapua::Core core(&stdlog, &config);
   Kapua::UDPNetwork local_discover(&stdlog, &config, &core);
 
-  stdlog.raw("----------------------------");
-  stdlog.raw("Kapua v"+Kapua::KAPUA_VERSION_STRING);
-  stdlog.raw("----------------------------");
-
   if (!config.load_yaml("config.yaml")) {
     stdlog.error("Cannot load YAML config");
     return EXIT_FAILURE;
   };
 
-  if(!config.load_cmd_line(ac,av)) {
+  if (!config.load_cmd_line(ac, av)) {
     return EXIT_FAILURE;
   };
 
   stdlog.set_log_level(config.logging_level);
 
+  if (!config.logging_disable_splash) {
+    stdlog.raw("----------------------------");
+    stdlog.raw("Kapua v" + Kapua::KAPUA_VERSION_STRING);
+    stdlog.raw("----------------------------");
+  }
+
   stdlog.info("Starting...");
-  if(!core.start()) {
+  if (!core.start()) {
     stdlog.error("core start failed");
     return EXIT_FAILURE;
   }
 
   stdlog.debug("Starting...");
-  if(!local_discover.start(ntohs(config.server_ip4_sockaddr.sin_port))) {
+  if (!local_discover.start(ntohs(config.server_ip4_sockaddr.sin_port))) {
     stdlog.error("local discover start failed");
     return EXIT_FAILURE;
   }
@@ -68,7 +70,9 @@ int main(int ac, char** av) {
   stdlog.debug("Stopping...");
   local_discover.stop();
   stdlog.info("Stopped");
-  stdlog.raw("----------------------------");
 
+  if (!config.logging_disable_splash) {
+    stdlog.raw("----------------------------");
+  }
   return EXIT_SUCCESS;
 }

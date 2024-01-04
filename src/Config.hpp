@@ -57,9 +57,10 @@ class Config {
   sockaddr_in memcached_ip4_sockaddr;        // server.ip4_address
   bool memcached_extensions;                 // memcached.extensions
   uint16_t memcached_connection_limit;       // memcached.connection_limit
-  uint32_t memcached_inactivity_timeout_ms;  // memcached.inactivity_timeout_ms
+  uint32_t memcached_inactivity_timeout_ms;  // memcached.inactivity_timeout
 
-  LogLevel_t logging_level;  // logging.level
+  LogLevel_t logging_level;     // logging.level
+  bool logging_disable_splash;  // logging.disable_splash
 
  protected:
   Logger* _logger;

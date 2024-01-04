@@ -1,3 +1,4 @@
 #!/bin/sh
 clang-format src/*.hpp src/*.cpp -i
 clang-format test/*.hpp test/*.cpp -i
+clang-format examples/kapuad/*.hpp examples/kapuad/*.cpp -i
