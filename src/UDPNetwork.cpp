@@ -11,9 +11,10 @@
 
 namespace Kapua {
 
-UDPNetwork::UDPNetwork(Logger* logger, Core* core) {
+UDPNetwork::UDPNetwork(Logger* logger, Config* config, Core* core) {
   _logger = new ScopedLogger("UDPNetwork", logger);
   _core = core;
+  _config = config;
   _running = false;
 }
 
@@ -160,9 +161,9 @@ void UDPNetwork::_main_loop() {
 
     // Get timing
     auto now = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - last_broadcast_time);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_broadcast_time);
 
-    if (duration.count() >= 5) {
+    if (_config->local_discovery_enable && duration.count() >= _config->local_discovery_interval_ms) {
       // Do the discovery broadcast
       _broadcast();
 
@@ -212,7 +213,7 @@ void UDPNetwork::_broadcast() {
   broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
   // Do the send
-  // _logger->debug("Discovery broadcast...");
+  _logger->debug("Discovery broadcast...");
   if (!_send(nullptr, pkt, broadcast_addr)) {
     _logger->error("Discovery broadcast error");
   }

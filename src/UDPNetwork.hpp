@@ -29,6 +29,7 @@
 #include <unistd.h>
 #endif
 
+#include "Config.hpp"
 #include "Core.hpp"
 #include "Kapua.hpp"
 #include "Logger.hpp"
@@ -38,7 +39,7 @@
 namespace Kapua {
 class UDPNetwork {
  public:
-  UDPNetwork(Logger* logger, Core* core);
+  UDPNetwork(Logger* logger, Config *config, Core* core);
   ~UDPNetwork();
 
   bool start(int port);
@@ -58,6 +59,7 @@ class UDPNetwork {
   void _process_packet(Node* node, std::shared_ptr<Packet> packet);
 
   Core* _core;
+  Config* _config;
 
   uint16_t _port;
 

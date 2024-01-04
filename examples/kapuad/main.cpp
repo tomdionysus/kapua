@@ -29,7 +29,7 @@ int main(int ac, char** av) {
   Kapua::IOStreamLogger stdlog(&cout, Kapua::LOG_LEVEL_DEBUG);
   Kapua::Config config(&stdlog);
   Kapua::Core core(&stdlog, &config);
-  Kapua::UDPNetwork local_discover(&stdlog, &core);
+  Kapua::UDPNetwork local_discover(&stdlog, &config, &core);
 
   stdlog.raw("----------------------------");
   stdlog.raw("Kapua v"+Kapua::KAPUA_VERSION_STRING);

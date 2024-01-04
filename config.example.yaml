@@ -6,14 +6,14 @@ server:
   port: 11840
 
   key_files:
-    private: "snakeoil.pem"
-    public: "snakeoil_pub.pem"
+    private: snakeoil.pem
+    public: snakeoil_pub.pem
 
 local_discovery: 
-  enable: true
+  enable: false
   ip4_address: 0.0.0.0
   port: 11840
-  interval: 1m
+  interval: 10s
 
 trackers:
   enable: true
