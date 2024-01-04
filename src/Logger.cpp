@@ -15,9 +15,7 @@ IOStreamLogger::IOStreamLogger(std::ostream* stream, LogLevel_t level) {
   _log_level = level;
 }
 
-void IOStreamLogger::set_log_level(LogLevel_t level) {
-  _log_level = level;
-}
+void IOStreamLogger::set_log_level(LogLevel_t level) { _log_level = level; }
 
 void IOStreamLogger::debug(std::string log) {
   if (_log_level < LogLevel_t::LOG_LEVEL_DEBUG) return;

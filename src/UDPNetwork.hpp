@@ -39,7 +39,7 @@
 namespace Kapua {
 class UDPNetwork {
  public:
-  UDPNetwork(Logger* logger, Config *config, Core* core);
+  UDPNetwork(Logger* logger, Config* config, Core* core);
   ~UDPNetwork();
 
   bool start(int port);

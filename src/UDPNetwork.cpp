@@ -103,7 +103,6 @@ void UDPNetwork::_main_loop() {
   // Standby Buffer
   std::shared_ptr<Packet> pkt = nullptr;
 
-
   // Set up listening on the server port
   if (!_listen(_port)) {
     _logger->error("Listen failed");

@@ -41,11 +41,11 @@ bool Config::load_yaml(std::string filename) {
 
     // logging
     if (config["logging"]["level"]) ok &= parse_log_level(source, "logging.level", config["logging"]["level"].as<std::string>(), &logging_level);
-    if(ok) {
+    if (ok) {
       // Special case. The logging level applies immediately.
       _logger->set_log_level(logging_level);
     }
-    
+
     // server.*
     if (config["server"]["id"]) ok &= parse_hex_uint64(source, "server.id", config["server"]["id"].as<std::string>(), &server_id);
     if (config["server"]["ip4_address"])
@@ -61,7 +61,6 @@ bool Config::load_yaml(std::string filename) {
     // memcache
     if (config["memcache"]["enable"]) ok &= parse_bool(source, "memcache.enable", config["memcache"]["enable"].as<std::string>(), &memcached_enable);
     if (config["memcache"]["port"]) ok &= parse_port(source, "memcache.port", config["memcache"]["port"].as<std::string>(), &memcached_ip4_sockaddr.sin_port);
-
 
     if (!ok) {
       _logger->error(std::string("Errors while parsing parsing configuration YAML"));
@@ -115,7 +114,7 @@ bool Config::load_cmd_line(int ac, char** av) {
 
     // logging
     if (vm.count("logging.level")) ok &= parse_log_level(source, "logging.level", vm["logging.level"].as<std::string>(), &logging_level);
-    if(ok) {
+    if (ok) {
       // Special case. The logging level applies immediately.
       _logger->set_log_level(logging_level);
     }
@@ -178,8 +177,8 @@ bool Config::parse_duration(const std::string& source, const std::string& name, 
         }
         isNegative = true;
       }
-      if(!std::isdigit(c)) {
-        _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - (bad start) must be [d]h[d]m[d]s where [d] is an integer");    
+      if (!std::isdigit(c)) {
+        _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - (bad start) must be [d]h[d]m[d]s where [d] is an integer");
       }
       buffer.push_back(c);
       mode = Mode::Digit;
