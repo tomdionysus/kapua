@@ -48,8 +48,8 @@ bool Config::load_yaml(std::string filename) {
     // local_discovery.*
     if (config["local_discovery"]["enable"])
       ok &= parse_bool(source, "local_discovery.enable", config["local_discovery"]["enable"].as<std::string>(), &local_discovery_enable);
-    // if (config["local_discovery"]["interval"])
-    //   ok &= parse_duration(source, "local_discovery.interval", config["local_discovery"]["interval"].as<std::string>(), false, &local_discovery_interval_ms);
+    if (config["local_discovery"]["interval"])
+      ok &= parse_duration(source, "local_discovery.interval", config["local_discovery"]["interval"].as<std::string>(), false, &local_discovery_interval_ms);
 
     // memcache
     if (config["memcache"]["enable"]) ok &= parse_bool(source, "memcache.enable", config["memcache"]["enable"].as<std::string>(), &memcached_enable);
@@ -105,6 +105,8 @@ bool Config::load_cmd_line(int ac, char** av) {
     // local_discovery
     if (vm.count("local_discovery.enable"))
       ok &= parse_bool(source, "local_discovery.enable", vm["local_discovery.enable"].as<std::string>(), &local_discovery_enable);
+    if (vm.count("local_discovery.interval"))
+      ok &= parse_duration(source, "local_discovery.interval", vm["local_discovery.interval"].as<std::string>(), false, &local_discovery_interval_ms);
 
     // memcache
     if (vm.count("memcache.enable")) ok &= parse_bool(source, "memcache.enable", vm["memcache.enable"].as<std::string>(), &memcached_enable);
@@ -132,104 +134,65 @@ bool Config::dump() {
   return true;
 }
 
-bool Config::parse_duration(const std::string& source, const std::string& input, const std::string& name, bool allowNegative, int32_t* ms) {
-  std::vector<std::pair<double, char>> components;  // Pairs of value and unit
-  size_t pos = 0;
-  size_t len = input.length();
-  bool lastIsFraction = false;  // Track if the last quantity is a fraction
-  bool isNegative = false;
+bool Config::parse_duration(const std::string& source, const std::string& name, const std::string& input, bool allowNegative, int32_t* ms) {
+  enum Mode { Start, Digit, Unit };
+  bool isNegative;
+  std::string buffer;
 
-  // Handle negative duration
-  if (!input.empty() && input[pos] == '-') {
-    isNegative = true;
-    pos++;
-  }
+  int32_t res = 0;
 
-  char lastUnit = 'u';  // Start with the smallest unit for comparison
+  Mode mode = Mode::Start;
 
-  while (pos < len) {
-    double value = 0.0;
-    char unit = '\0';
-    bool hasFraction = false;      // Track if a fraction is present
-    bool fractionStarted = false;  // Track if we are parsing the fractional part
+  for (char c : input) {
+    // if (c == ' ' && mode != Mode::Digit) continue;
 
-    while (pos < len && (isdigit(input[pos]) || input[pos] == '.')) {
-      if (input[pos] == '.') {
-        if (hasFraction) {  // Second decimal point found - invalid format
-          _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - decimals must be well formed");
+    if (mode == Mode::Start) {
+      if (c == '-') {
+        if (!allowNegative) {
+          _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - duration cannot be negative");
           return false;
         }
-        hasFraction = true;
-        fractionStarted = true;
-      } else {
-        value = value * 10 + (input[pos] - '0');
-        if (fractionStarted) {
-          value /= 10;
-        }
+        isNegative = true;
       }
-      pos++;
-    }
+      if(!std::isdigit(c)) {
+        _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - (bad start) must be [d]h[d]m[d]s where [d] is an integer");    
+      }
+      buffer.push_back(c);
+      mode = Mode::Digit;
+    } else if (mode == Mode::Digit) {
+      if ((c >= '0') && (c <= '9')) {
+        // Add it to the buffer
+        buffer.push_back(c);
+        continue;
+      }
 
-    // Parse the unit part
-    if (pos < len) {
-      unit = input[pos];
-      pos++;
-    }
+      // Bad format if any character is first (buffer is empty)
+      if (buffer.length() == 0) {
+        _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - (no buffer) must be [d]h[d]m[d]s where [d] is an integer");
+        return false;
+      }
 
-    // Validate unit
-    if ((unit != 'h' && unit != 'm' && unit != 's' && unit != 'u') || (unit == '\0' && pos < len)) {
-      _logger->error("(" + source + ") " + name + " - invalid unit (" + unit + "): " + input + " - must be 'h','m','s','u'");
-      return false;
-    }
-
-    // Validate the order of units
-    if ((unit == 'h' && lastUnit != 'u') || (unit == 'm' && lastUnit != 'u' && lastUnit != 'h') ||
-        (unit == 's' && lastUnit != 'u' && lastUnit != 'h' && lastUnit != 'm') || (unit == 'u' && lastUnit != 'u')) {
-      _logger->error("(" + source + ") " + name + " - invalid unit  order: " + input + " - must be 'h' > 'm' > 's' > 'u'");
-      return false;
-    }
-
-    lastUnit = unit;  // Update the last seen unit
-    components.emplace_back(value, unit);
-    lastIsFraction = hasFraction;
-  }
-
-  // Ensure the last element is the only fraction
-  for (size_t i = 0; i < components.size() - 1; ++i) {
-    if (components[i].first != static_cast<int64_t>(components[i].first)) {
-      _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - must be NhNmNsNu");
-      return false;
-    }
-  }
-
-  int32_t milliseconds = 0;
-
-  for (const auto& component : components) {
-    switch (component.second) {
-      case 'h':
-        milliseconds += static_cast<int32_t>(component.first * 3600000);
-        break;
-      case 'm':
-        milliseconds += static_cast<int32_t>(component.first * 60000);
-        break;
-      case 's':
-        milliseconds += static_cast<int32_t>(component.first * 1000);
-        break;
-      case 'u':
-        milliseconds += static_cast<int32_t>(component.first);
-        break;
+      // Process formats...
+      if (c == 'h') {
+        res += (std::stoi(buffer) * 60 * 60 * 1000);
+        buffer.clear();
+      } else if (c == 'm') {
+        res += (std::stoi(buffer) * 60 * 1000);
+        buffer.clear();
+      } else if (c == 's') {
+        res += (std::stoi(buffer) * 1000);
+        buffer.clear();
+      } else {
+        // Bad format if not recognised
+        _logger->error("(" + source + ") " + name + " - invalid format: " + input + " - unit not recognised, must be 'h','m','s'");
+        return false;
+      }
     }
   }
 
-  // Apply negative sign if needed
-  if (isNegative && allowNegative) {
-    milliseconds = -milliseconds;
-  } else {
-    _logger->error("(" + source + ") " + name + " - invalid value: " + input + " - must be positive");
-    return false;
-  }
+  *ms = res;
 
-  *ms = milliseconds;
+  _logger->debug("(" + source + ") " + name + " = " + std::to_string(res) + "ms");
 
   return true;
 }
