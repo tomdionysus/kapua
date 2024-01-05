@@ -10,10 +10,10 @@ server:
     public: snakeoil_pub.pem
 
 local_discovery: 
-  enable: false
+  enable: true
   ip4_address: 0.0.0.0
   port: 11840
-  interval: 10s
+  interval: 5s
 
 trackers:
   enable: true

@@ -149,23 +149,26 @@ void UDPNetwork::_main_loop() {
 void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
   // _logger->error("Processing Packet");
 
-  node->update_last_contact();
-
-  // If the node is just initialised, request its public key
-  if (node->state == Node::State::Initialised) {
-  }
+  if(node) node->update_last_contact();
 
   switch (pkt->type) {
     case Packet::Ping:
       break;
     case Packet::PublicKeyRequest:
+      if(!node) {
+        _logger->warn("Public Key Request from unknown node");
+        break;
+      }
+      _logger->debug("Public Key Request from " + std::to_string(node->id));
       break;
     case Packet::PublicKeyReply:
       break;
     case Packet::EncryptionContext:
       break;
+    case Packet::Discovery:
+      break;
     default:
-      _logger->warn("Unknown packet type" + std::to_string(pkt->type));
+      _logger->warn("Unknown packet type " + std::to_string(pkt->type));
       break;
   }
 }
@@ -181,7 +184,7 @@ void UDPNetwork::_broadcast() {
   broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
   // Do the send
-  _logger->debug("Discovery broadcast...");
+  // _logger->debug("Discovery broadcast...");
   if (!_send(nullptr, pkt, broadcast_addr)) {
     _logger->error("Discovery broadcast error");
   }
@@ -213,7 +216,7 @@ bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& 
   if (size <= 0) {
     return false;
   }
-  _logger->debug("Parsing Packet (" + std::to_string(size) + " bytes)");
+  // _logger->debug("Parsing Packet (" + std::to_string(size) + " bytes)");
 
   // Is the packet large enough?
   if (size < KAPUA_HEADER_SIZE) {
@@ -228,7 +231,7 @@ bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& 
   if (pkt->check_magic_valid()) {
     // If yes, the packet is unencrypted.
     if (node) {
-      _logger->debug("Warning: Known node sent us an unencrypted packet");
+      // _logger->debug("Warning: Known node sent us an unencrypted packet");
     }
   } else {
     // Packet is either encrypted, or bad. Try a decrypt
@@ -262,7 +265,7 @@ bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& 
 
   // Check from us
   if (pkt->from_id == _core->get_my_id()) {
-    _logger->debug("Packet received from us");
+    // _logger->debug("Packet received from us");
     // Ignore packets from us
     return false;
   }
@@ -271,8 +274,13 @@ bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& 
 
   // Is this a new node?
   if (!node) {
+    // Add the node
     node = _core->add_node(pkt->from_id, client_addr);
     _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + client_addr_str + ")");
+    // Queue action to ask node for public key
+    ActionRequestPublicKey rpka_action;
+    rpka_action.node_id = pkt->from_id;
+    _core->queue_action(rpka_action);
   }
 
   _logger->debug("Packet From " + Util::to_hex64_str(pkt->from_id) + ", " + std::to_string(size) + " bytes.");

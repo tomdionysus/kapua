@@ -11,7 +11,7 @@
 using namespace std;
 
 namespace Kapua {
-Core ::Core(Logger* logger, Config* config) {
+Core ::Core(Logger* logger, Config* config) : _running(false) {
   _logger = new Kapua::ScopedLogger("Core", logger);
 
   _config = config;
@@ -30,7 +30,14 @@ Core ::~Core() {
 bool Core::start() {
   _logger->debug("Starting...");
   _my_id = _get_random_id();
-  _logger->debug("Started");
+  _thread = boost::thread(&Core::_main_loop, this);
+  return true;
+}
+
+bool Core::stop() {
+  _running = false;
+  _thread.join();
+  _logger->debug("Stopped");
   return true;
 }
 
@@ -65,7 +72,49 @@ Node* Core::find_node(sockaddr_in addr) {
   return nullptr;
 }
 
+bool Core::queue_action(Action action) {
+  std::lock_guard<std::mutex> lock(_action_mutex);
+  _actions.push(action);
+  _action_waiting.notify_one(); // Notify the waiting thread
+  return true;
+}
+
 uint64_t Core::get_my_id() { return _my_id; }
+
+void Core::_main_loop() {
+ if(_running) {
+  _logger->error("Start called but already running");
+   return;
+ }
+
+  _logger->debug("Started");
+
+  _running = true;
+
+ while(_running) {
+    std::unique_lock<std::mutex> lock(_action_mutex);
+    if (_action_waiting.wait_for(lock, std::chrono::milliseconds(100), [this]{ return !_actions.empty(); })) {
+        while (!_actions.empty()) {
+            Action action = _actions.front();
+            _actions.pop();
+            switch(action.type) {
+              case ActionType::RequestPublicKey:
+                action_request_public_key(action);
+                break;
+                default:
+                _logger->error("Unknown action type");
+            }
+        }
+    }
+ }
+
+ _logger->debug("Stopping...");
+}
+
+void Core::action_request_public_key(Action action) {
+  ActionRequestPublicKey *arpk = static_cast<ActionRequestPublicKey*>(&action);
+  _logger->debug("ActionRequestPublicKey NodeId "+std::to_string(arpk->node_id));
+}
 
 uint64_t Core::_get_random_id() {
   std::random_device rd;

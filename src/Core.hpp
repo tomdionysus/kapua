@@ -14,11 +14,18 @@
 #include <random>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
+#include <boost/thread.hpp>
+#include <atomic>
+#include <queue>
+#include <condition_variable>
 
 #include "Config.hpp"
 #include "Logger.hpp"
 #include "Node.hpp"
+#include "RSA.hpp"
 #include "SockaddrHashable.hpp"
+#include "Actions.hpp"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -43,11 +50,16 @@ class Core {
   ~Core();
 
   bool start();
+  bool stop();
 
   Node* add_node(uint64_t id, sockaddr_in addr);
   void remove_node(uint64_t id);
   Node* find_node(uint64_t id);
   Node* find_node(sockaddr_in addr);
+
+  bool queue_action(Action action);
+
+  void action_request_public_key(Action action);
 
   uint64_t get_my_id();
 
@@ -68,7 +80,17 @@ class Core {
   std::unordered_map<uint64_t, std::vector<Node>> _groups;
   std::mutex _groups_mutex;
 
+  std::queue<Action> _actions;
+  std::condition_variable _action_waiting;
+  std::mutex _action_mutex;
+
+  boost::thread _thread;
+
   uint64_t _get_random_id();
+
+  void _main_loop();
+
+  std::atomic<bool> _running;
 };
 
 };  // namespace Kapua
