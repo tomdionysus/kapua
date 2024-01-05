@@ -54,7 +54,7 @@ class Config {
   std::vector<std::string> trackers_servers;  // trackers.servers
 
   bool memcached_enable;                     // memcached.enable
-  sockaddr_in memcached_ip4_sockaddr;        // server.ip4_address
+  sockaddr_in memcached_ip4_sockaddr;        // memcached.ip4_address
   bool memcached_extensions;                 // memcached.extensions
   uint16_t memcached_connection_limit;       // memcached.connection_limit
   uint32_t memcached_inactivity_timeout_ms;  // memcached.inactivity_timeout

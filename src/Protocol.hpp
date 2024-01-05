@@ -83,6 +83,8 @@ struct Packet {
 
   Packet(PacketType pType, uint64_t fromId, uint64_t toId, uint64_t requestId) : Packet(pType, fromId, toId) { request_id = requestId; }
 
+  Packet(uint8_t* buffer, uint16_t length) { memcpy(this, buffer, length); }
+
   bool check_magic_valid() { return std::memcmp(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size()) == 0; }
 
   bool check_version_valid(bool strict = false) {

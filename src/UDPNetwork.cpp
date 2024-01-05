@@ -99,6 +99,7 @@ bool UDPNetwork::_listen(int port) {
 
 void UDPNetwork::_main_loop() {
   sockaddr_in from_addr;
+  Node* node;
 
   // Standby Buffer
   std::shared_ptr<Packet> pkt = nullptr;
@@ -122,42 +123,8 @@ void UDPNetwork::_main_loop() {
     if (!pkt) pkt = std::make_shared<Packet>();
 
     // Receive if any
-    ssize_t len = _receive(reinterpret_cast<char*>(pkt.get()), KAPUA_MAX_PACKET_SIZE, from_addr);
-    if (len < 0) {
-      _logger->error("Server receive error: " + std::string(strerror(errno)));
-    } else if (len > 0) {
-      std::string from_addr_str = std::string(inet_ntoa(from_addr.sin_addr)) + ":" + std::to_string(ntohs(from_addr.sin_port));
-      //_logger->debug("Packet From " + from_addr_str + ", " + std::to_string(len) + " bytes.");
-
-      // Verify the packet
-      if (len < 32) {
-        // Length First
-        _logger->debug("Non-Kapua packet received (too short)");
-      } else {
-        // Valid magic Number?
-        if (!pkt->check_magic_valid()) {
-          std::string bad_magic = [&] {
-            std::ostringstream oss;
-            oss << "0x" << std::setfill('0') << std::setw(10) << std::hex << pkt->magic;
-            return oss.str();
-          }();
-          _logger->debug("Non-Kapua packet received (bad magic number " + bad_magic + ")");
-        } else if (!pkt->check_version_valid()) {
-          // TODO: Setting for strict version checking
-          // Version
-          _logger->debug("Packet received with incompatible version (" + pkt->get_version_string() + ")");
-        } else if (pkt->from_id == _core->get_my_id()) {
-          // Ignore packets from us
-        } else {
-          // Check ID does not exist
-          Node* node = _core->find_node(pkt->from_id);
-          if (!node) {
-            node = _core->add_node(pkt->from_id, from_addr);
-            _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + from_addr_str + ")");
-          }
-          _process_packet(node, pkt);
-        }
-      }
+    if (_receive(node, pkt, from_addr)) {
+      _process_packet(node, pkt);
     }
 
     // Get timing
@@ -177,7 +144,7 @@ void UDPNetwork::_main_loop() {
   _shutdown();
 
   _logger->debug("Stopped");
-}
+}  // namespace Kapua
 
 void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
   // _logger->error("Processing Packet");
@@ -220,7 +187,10 @@ void UDPNetwork::_broadcast() {
   }
 }
 
-ssize_t UDPNetwork::_receive(char* buffer, size_t buffer_size, sockaddr_in& client_addr) {
+bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& client_addr) {
+  uint8_t crypt_buffer[KAPUA_MAX_PACKET_SIZE];
+  uint8_t* buffer = reinterpret_cast<uint8_t*>(pkt.get());
+
   // Do a select to see if there is a packet waiting
   struct timeval tv;
   tv.tv_sec = 0;
@@ -231,12 +201,83 @@ ssize_t UDPNetwork::_receive(char* buffer, size_t buffer_size, sockaddr_in& clie
   int recVal = select(_server_socket_fd + 1, &rfds, NULL, NULL, &tv);
 
   // If there is, get the packet and return
-  if (recVal > 0) {
-    socklen_t client_len = sizeof(client_addr);
-    return recvfrom(_server_socket_fd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &client_len);
-  } else {
-    return 0;
+  if (recVal <= 0) {
+    return false;
   }
+
+  // Get a packet, reaad directly into packet buffer
+  socklen_t client_len = sizeof(client_addr);
+  uint16_t size = recvfrom(_server_socket_fd, buffer, KAPUA_MAX_PACKET_SIZE, 0, (struct sockaddr*)&client_addr, &client_len);
+
+  // Is there a packet?
+  if (size <= 0) {
+    return false;
+  }
+  _logger->debug("Parsing Packet (" + std::to_string(size) + " bytes)");
+
+  // Is the packet large enough?
+  if (size < KAPUA_HEADER_SIZE) {
+    _logger->debug("Non-Kapua packet received (too short)");
+    return false;
+  }
+
+  // Packet may be from a known node.
+  node = _core->find_node(pkt->from_id);
+
+  // Valid magic Number?
+  if (pkt->check_magic_valid()) {
+    // If yes, the packet is unencrypted.
+    if (node) {
+      _logger->debug("Warning: Known node sent us an unencrypted packet");
+    }
+  } else {
+    // Packet is either encrypted, or bad. Try a decrypt
+    if (node && node->state >= Node::State::Connected) {
+      // Check for connected/context
+      if (!_aes_decrypt(node->aes_context, buffer, KAPUA_HEADER_SIZE + pkt->length, crypt_buffer)) {
+        _logger->error("Error while decrypting packet");
+        return false;
+      }
+
+      // Update packet with unencrypted plaintext
+      memcpy(buffer, crypt_buffer, size);
+
+      // Check now valid
+      if (!pkt->check_magic_valid()) {
+        _logger->debug("Error: Decrypted packet has bad magic number");
+        // TODO: Handle node state.
+        // node->state = Node::State::Desynchronisied;
+        return false;
+      }
+    }
+  }
+
+  // Check Version
+  if (!pkt->check_version_valid()) {
+    // TODO: Setting for strict version checking
+    // Version
+    _logger->debug("Packet received with incompatible version (" + pkt->get_version_string() + ")");
+    return false;
+  }
+
+  // Check from us
+  if (pkt->from_id == _core->get_my_id()) {
+    _logger->debug("Packet received from us");
+    // Ignore packets from us
+    return false;
+  }
+
+  std::string client_addr_str = std::string(inet_ntoa(client_addr.sin_addr)) + ":" + std::to_string(ntohs(client_addr.sin_port));
+
+  // Is this a new node?
+  if (!node) {
+    node = _core->add_node(pkt->from_id, client_addr);
+    _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + client_addr_str + ")");
+  }
+
+  _logger->debug("Packet From " + Util::to_hex64_str(pkt->from_id) + ", " + std::to_string(size) + " bytes.");
+
+  return true;
 }
 
 bool UDPNetwork::_send(Node* node, std::shared_ptr<Packet> pkt, const sockaddr_in& addr) {
