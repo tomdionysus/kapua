@@ -5,6 +5,7 @@
 // Copyright (c) Tom Cully 2023
 //
 #include "RSA.hpp"
+#include "Util.hpp"
 
 #include <openssl/core_names.h>
 #include <openssl/pem.h>
@@ -132,7 +133,7 @@ bool RSA::encrypt_aes_context(const AESContext* context, EVP_PKEY* publicKey, ui
   }
 
   // Actual encryption
-  if (EVP_PKEY_encrypt(ctx, out_buffer, out_size, reinterpret_cast<const uint8_t*>(context), sizeof(AESContext)) <= 0) {
+  if (EVP_PKEY_encrypt(ctx, out_buffer, out_size, reinterpret_cast<const uint8_t*>(context), sizeof(AESContext)) != 1) {
     _logger->error("Error encrypting context.");
     EVP_PKEY_CTX_free(ctx);
     return false;
@@ -150,7 +151,7 @@ bool RSA::decrypt_aes_context(AESContext* context, EVP_PKEY* privateKey, const u
     return false;
   }
 
-  if (EVP_PKEY_decrypt(ctx, reinterpret_cast<uint8_t*>(context), out_size, in_buffer, in_size) <= 0) {
+  if (EVP_PKEY_decrypt(ctx, reinterpret_cast<uint8_t*>(context), out_size, in_buffer, in_size) != 1) {
     _logger->error("Error decrypting context.");
     EVP_PKEY_CTX_free(ctx);
     return false;

@@ -23,6 +23,7 @@ class Node {
     Initialised,
     KeyExchange,
     Handshake,
+    CheckEncryption,
     Connected,
   };
 

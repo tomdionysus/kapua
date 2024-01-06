@@ -26,7 +26,7 @@
 namespace Kapua {
 
 #define KAPUA_MAX_PACKET_SIZE 1450
-#define KAPUA_HEADER_SIZE 44
+#define KAPUA_HEADER_SIZE 46
 #define KAPUA_MAX_DATA_SIZE (KAPUA_MAX_PACKET_SIZE-KAPUA_HEADER_SIZE)
 
 #define KAPUA_ID_GROUP 0xFFFFFFFFFFFFFF01
@@ -150,6 +150,8 @@ struct Packet {
         return "PublicKeyReply";
       case PacketType::EncryptionContext:
         return "EncryptionContext";
+       case PacketType::Ready:
+        return "Ready";
       case PacketType::Discovery:
         return "Discovery";
       default:

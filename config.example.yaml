@@ -13,7 +13,7 @@ local_discovery:
   enable: true
   ip4_address: 0.0.0.0
   port: 11840
-  interval: 20s
+  interval: 20h
 
 trackers:
   enable: true

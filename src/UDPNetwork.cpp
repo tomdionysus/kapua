@@ -165,8 +165,9 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
         break;
       }
       
-      node->state = Node::State::KeyExchange;
       _send(node, reply, node->addr);
+      
+      node->state = Node::State::KeyExchange;
       
       break;
 
@@ -191,15 +192,14 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
         _logger->warn("Encrypting AESContext failed");
         break;
       }
-
-      memcpy(reply->data, buffer, len);
       reply->length = len;
 
-      node->state = Node::State::Handshake;
       _send(node, reply, node->addr);
 
+      node->state = Node::State::Handshake;
 
       break;
+
     case Packet::EncryptionContext:
       if (!node) {
         _logger->warn("EncryptionContext from unknown node");
@@ -218,7 +218,10 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
 
       reply = std::make_shared<Packet>(Packet::Ready, _core->get_my_id(), node->id);
       reply->length = 0;
+
       _send(node, reply, node->addr);
+
+      node->state = Node::State::CheckEncryption;
 
       break;
     
@@ -228,8 +231,8 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
         break;
       }
 
-      if(node->state != Node::State::Handshake) {
-        _logger->warn("Ready from a Node which isnt in Handshake");
+      if(node->state != Node::State::CheckEncryption) {
+        _logger->warn("Ready from a Node which isnt in CheckEncryption");
         break;
       }
 
@@ -298,19 +301,21 @@ bool UDPNetwork::_receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in&
   }
 
   // Packet may be from a known node.
-  *node = _core->find_node(pkt->from_id);
+  *node = _core->find_node(client_addr);
 
   // Valid magic Number?
   if (pkt->check_magic_valid()) {
     // If yes, the packet is unencrypted.
-    if (*node) {
-      _logger->debug("Warning: Known node sent us an unencrypted packet");
+    if (*node && (*node)->state>=Node::State::Connected && pkt->type!=Packet::PacketType::Discovery) {
+      _logger->debug("Warning: Connected node sent us an unencrypted packet");
     }
   } else {
     // Packet is either encrypted, or bad. Try a decrypt
-    if (*node && (*node)->state >= Node::State::Connected) {
+    if (*node && (*node)->state >= Node::State::CheckEncryption) {
       // Check for connected/context
-      if (!_aes_decrypt((*node)->aes_context, buffer, KAPUA_HEADER_SIZE + pkt->length, crypt_buffer)) {
+      _logger->warn("Decrypting packet");
+
+      if (!_aes_decrypt((*node)->aes_context, buffer, size, crypt_buffer)) {
         _logger->error("Error while decrypting packet");
         return false;
       }
@@ -324,6 +329,9 @@ bool UDPNetwork::_receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in&
         // TODO: Handle node state.
         // node->state = Node::State::Desynchronisied;
         return false;
+      } else {
+        _logger->debug("Decrypted packet OK");
+
       }
     }
   }
@@ -365,7 +373,8 @@ bool UDPNetwork::_receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in&
 bool UDPNetwork::_send(Node* node, std::shared_ptr<Packet> pkt, const sockaddr_in& addr) {
   uint8_t crypt_buffer[KAPUA_MAX_PACKET_SIZE];
   uint8_t* buffer = reinterpret_cast<uint8_t*>(pkt.get());
-  if (node != nullptr && node->state >= Node::State::Connected) {
+  if (node != nullptr && node->state >= Node::State::CheckEncryption) {
+    _logger->warn("Encrypting packet");
     if (!_aes_encrypt(node->aes_context, buffer, KAPUA_HEADER_SIZE + pkt->length, crypt_buffer)) {
       _logger->error("Error while encrypting packet");
       return false;
@@ -373,8 +382,6 @@ bool UDPNetwork::_send(Node* node, std::shared_ptr<Packet> pkt, const sockaddr_i
     buffer = crypt_buffer;
   }
 
-  _logger->debug("Sending Packet To " + Util::to_hex64_str(pkt->to_id) + " (" + Util::sockaddr_to_string(addr) + "), " +
-                 std::to_string(KAPUA_HEADER_SIZE + pkt->length) + " bytes (" + Packet::packet_type_to_string(pkt->type) + ")");
   return sendto(_server_socket_fd, buffer, KAPUA_HEADER_SIZE + pkt->length, 0, (const struct sockaddr*)&addr, sizeof(addr)) == KAPUA_HEADER_SIZE + pkt->length;
 }
 
@@ -442,12 +449,14 @@ bool UDPNetwork::_aes_decrypt(AESContext& context, const uint8_t* ciphertext, si
 
   // Initialize the decryption operation
   if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, context.key, context.iv) != 1) {
+    _logger->warn("EVP_DecryptInit_ex failed");
     EVP_CIPHER_CTX_free(ctx);
     return false;
   }
 
   // Provide the ciphertext to be decrypted
   if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len) != 1) {
+    _logger->warn("EVP_DecryptUpdate failed");
     EVP_CIPHER_CTX_free(ctx);
     return false;
   }
@@ -455,6 +464,7 @@ bool UDPNetwork::_aes_decrypt(AESContext& context, const uint8_t* ciphertext, si
 
   // Finalize the decryption
   if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1) {
+    _logger->warn("EVP_DecryptFinal_ex failed");
     EVP_CIPHER_CTX_free(ctx);
     return false;
   }
