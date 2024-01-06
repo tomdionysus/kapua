@@ -1,6 +1,7 @@
 #include <signal.h>
 
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <thread>
 
@@ -8,10 +9,8 @@
 #include "Kapua.hpp"
 #include "Logger.hpp"
 #include "Protocol.hpp"
-#include "UDPNetwork.hpp"
 #include "RSA.hpp"
-
-#include <fstream>
+#include "UDPNetwork.hpp"
 
 using namespace std;
 
@@ -34,7 +33,7 @@ int main(int ac, char** av) {
   Kapua::RSA rsa(&stdlog, &config);
   Kapua::Core core(&stdlog, &config, &rsa);
 
-  if(!std::ifstream("private.pem").good()) {
+  if (!std::ifstream("private.pem").good()) {
     rsa.generate_rsa_key_pair("public.pem", "private.pem", 2048);
   }
 

@@ -6,8 +6,8 @@
 //
 #pragma once
 
-#include <openssl/rsa.h>
 #include <openssl/rand.h>
+#include <openssl/rsa.h>
 
 #include <string>
 

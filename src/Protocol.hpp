@@ -27,12 +27,11 @@ namespace Kapua {
 
 #define KAPUA_MAX_PACKET_SIZE 1450
 #define KAPUA_HEADER_SIZE 46
-#define KAPUA_MAX_DATA_SIZE (KAPUA_MAX_PACKET_SIZE-KAPUA_HEADER_SIZE)
+#define KAPUA_MAX_DATA_SIZE (KAPUA_MAX_PACKET_SIZE - KAPUA_HEADER_SIZE)
 
 #define KAPUA_ID_GROUP 0xFFFFFFFFFFFFFF01
 #define KAPUA_ID_BROADCAST 0xFFFFFFFFFFFFFFFF
 #define KAPUA_ID_NULL 0x0000000000000000
-
 
 typedef struct Peer {
   uint64_t id;
@@ -101,26 +100,26 @@ struct Packet {
   // Packet PublicKeyReply
   bool write_public_key(KeyPair *key_pair) {
     if (key_pair->publicKey == nullptr) {
-        // Handle error: public key is not initialized
-        throw std::runtime_error("Public key is null");
+      // Handle error: public key is not initialized
+      throw std::runtime_error("Public key is null");
     }
 
     int len = i2d_PublicKey(key_pair->publicKey, nullptr);
     if (len <= 0) {
-        // Handle error: failed to get the length
-        throw std::runtime_error("Failed to get the length of the public key");
+      // Handle error: failed to get the length
+      throw std::runtime_error("Failed to get the length of the public key");
     }
 
-    if(len > KAPUA_MAX_DATA_SIZE) {
-        throw std::runtime_error("Length of encoded public key is larger than KAPUA_MAX_DATA_SIZE");
+    if (len > KAPUA_MAX_DATA_SIZE) {
+      throw std::runtime_error("Length of encoded public key is larger than KAPUA_MAX_DATA_SIZE");
     }
 
-    unsigned char *buffer = (unsigned char*)&data;
+    unsigned char *buffer = (unsigned char *)&data;
     unsigned char **ptrToBuffer = &buffer;
 
     if (i2d_PublicKey(key_pair->publicKey, ptrToBuffer) != len) {
-        // Handle error: failed to serialize the key
-        throw std::runtime_error("Failed to serialize the public key");
+      // Handle error: failed to serialize the key
+      throw std::runtime_error("Failed to serialize the public key");
     }
 
     length = len;
@@ -133,8 +132,8 @@ struct Packet {
 
     key_pair->publicKey = d2i_PublicKey(EVP_PKEY_RSA, nullptr, &buf, length);
     if (key_pair->publicKey == nullptr) {
-        // Handle error: deserialization failed
-        throw std::runtime_error("Failed to deserialize the public key");
+      // Handle error: deserialization failed
+      throw std::runtime_error("Failed to deserialize the public key");
     }
 
     return true;
@@ -150,7 +149,7 @@ struct Packet {
         return "PublicKeyReply";
       case PacketType::EncryptionContext:
         return "EncryptionContext";
-       case PacketType::Ready:
+      case PacketType::Ready:
         return "Ready";
       case PacketType::Discovery:
         return "Discovery";

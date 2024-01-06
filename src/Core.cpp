@@ -5,6 +5,7 @@
 // Copyright (c) Tom Cully 2023
 //
 #include "Core.hpp"
+
 #include "Logger.hpp"
 
 using namespace std;

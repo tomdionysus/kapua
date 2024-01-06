@@ -65,7 +65,7 @@ class Core {
   KeyPair* get_my_public_key();
 
   void get_version(Version_t* version);
-  
+
   KeyPair _keys;
 
  protected:

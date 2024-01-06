@@ -147,95 +147,106 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
 
   if (node) node->update_last_contact();
 
-  _logger->debug("Packet From " + Util::to_hex64_str(pkt->from_id) + ", " + std::to_string(pkt->length) + " bytes ("+Packet::packet_type_to_string(pkt->type)+")");
+  _logger->debug("Packet From " + Util::to_hex64_str(pkt->from_id) + ", " + std::to_string(pkt->length) + " bytes (" +
+                 Packet::packet_type_to_string(pkt->type) + ")");
 
   switch (pkt->type) {
     case Packet::Ping:
       break;
+
     case Packet::PublicKeyRequest:
+      // The node must be known to us
       if (!node) {
         _logger->warn("PublicKeyRequest from unknown node");
         break;
       }
 
+      // Reply with our public key
       reply = std::make_shared<Packet>(Packet::PublicKeyReply, _core->get_my_id(), node->id);
-
-      if(!reply->write_public_key(_core->get_my_public_key())) {
+      if (!reply->write_public_key(_core->get_my_public_key())) {
         _logger->error("write_public_key failed");
         break;
       }
-      
       _send(node, reply, node->addr);
-      
+
+      // Node state is now KeyExchange
       node->state = Node::State::KeyExchange;
-      
       break;
 
     case Packet::PublicKeyReply:
+      // The node must be known to us
       if (!node) {
         _logger->warn("PublicKeyReply from unknown node");
         break;
       }
 
-      if(node->state != Node::State::KeyExchange) {
+      // The node state must be KeyExchange
+      if (node->state != Node::State::KeyExchange) {
         _logger->warn("PublicKeyReply from a Node which isnt in KeyExchange");
         break;
       }
 
-      _logger->debug("Setting public key for node "+Util::to_hex64_str(node->id));
+      // Read and set the public key for this node
       pkt->read_public_key(&node->keys);
 
+      // Generate and set a random AESContext (session key) and encrypt it using the node public key, then send it to the node.
       reply = std::make_shared<Packet>(Packet::EncryptionContext, _core->get_my_id(), node->id);
       node->aes_context.generate();
-
-      if(!_rsa->encrypt_aes_context(&(node->aes_context), node->keys.publicKey, (uint8_t*)&(reply->data), KAPUA_MAX_DATA_SIZE, &len)) {
+      if (!_rsa->encrypt_aes_context(&(node->aes_context), node->keys.publicKey, (uint8_t*)&(reply->data), KAPUA_MAX_DATA_SIZE, &len)) {
         _logger->warn("Encrypting AESContext failed");
         break;
       }
       reply->length = len;
-
       _send(node, reply, node->addr);
 
+      // Node state is now Handshake
       node->state = Node::State::Handshake;
 
       break;
 
     case Packet::EncryptionContext:
+      // The node must be known to us
       if (!node) {
         _logger->warn("EncryptionContext from unknown node");
         break;
       }
 
-      if(node->state != Node::State::Handshake) {
+      // The node state must be Handshake
+      if (node->state != Node::State::Handshake) {
         _logger->warn("EncryptionContext from a Node which isnt in Handshake");
         break;
       }
 
-      if(!_rsa->decrypt_aes_context(&(node->aes_context), _core->get_my_public_key()->privateKey, (uint8_t*)&(pkt->data), pkt->length, &len)) {
+      // Decrypt the AESContext sent to us using the node's public key, set it as the node session key.
+      if (!_rsa->decrypt_aes_context(&(node->aes_context), _core->get_my_public_key()->privateKey, (uint8_t*)&(pkt->data), pkt->length, &len)) {
         _logger->warn("Decrypting AESContext failed");
         break;
       }
 
+      // Reply with the Ready message (this will now be encrypted with the session key)
       reply = std::make_shared<Packet>(Packet::Ready, _core->get_my_id(), node->id);
       reply->length = 0;
-
       _send(node, reply, node->addr);
 
+      // Node state is now CheckEncryption
       node->state = Node::State::CheckEncryption;
 
       break;
-    
+
     case Packet::Ready:
+      // The node must be known to us
       if (!node) {
         _logger->warn("Ready from unknown node");
         break;
       }
 
-      if(node->state != Node::State::CheckEncryption) {
+      // The node state must be CheckEncryption
+      if (node->state != Node::State::CheckEncryption) {
         _logger->warn("Ready from a Node which isnt in CheckEncryption");
         break;
       }
 
+      // Node state is now Connected
       node->state = Node::State::Connected;
 
       break;
@@ -243,6 +254,7 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
     case Packet::Discovery:
       // _logger->debug("Discovery from " + Util::to_hex64_str(pkt->from_id));
       break;
+
     default:
       _logger->warn("Unknown packet type " + std::to_string(pkt->type));
       break;
@@ -306,7 +318,7 @@ bool UDPNetwork::_receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in&
   // Valid magic Number?
   if (pkt->check_magic_valid()) {
     // If yes, the packet is unencrypted.
-    if (*node && (*node)->state>=Node::State::Connected && pkt->type!=Packet::PacketType::Discovery) {
+    if (*node && (*node)->state >= Node::State::Connected && pkt->type != Packet::PacketType::Discovery) {
       _logger->debug("Warning: Connected node sent us an unencrypted packet");
     }
   } else {
@@ -331,7 +343,6 @@ bool UDPNetwork::_receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in&
         return false;
       } else {
         _logger->debug("Decrypted packet OK");
-
       }
     }
   }

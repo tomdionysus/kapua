@@ -5,12 +5,13 @@
 // Copyright (c) Tom Cully 2023
 //
 #include "RSA.hpp"
-#include "Util.hpp"
 
 #include <openssl/core_names.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
+
+#include "Util.hpp"
 
 namespace Kapua {
 

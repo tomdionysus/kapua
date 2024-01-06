@@ -19,10 +19,10 @@ static std::string sockaddr_to_string(const sockaddr_in &addr) { return std::str
 static std::string to_hex(const uint8_t *buffer, size_t len) {
   std::ostringstream oss;
   oss << std::setfill('0') << std::setw(2) << std::hex;
-  for(uint32_t i= 0; i< len; i++) {
+  for (uint32_t i = 0; i < len; i++) {
     oss << std::setw(2) << static_cast<unsigned int>(buffer[i]);
   }
- return oss.str();
+  return oss.str();
 }
 
 }  // namespace Util
