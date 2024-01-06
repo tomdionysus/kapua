@@ -11,10 +11,11 @@
 
 namespace Kapua {
 
-UDPNetwork::UDPNetwork(Logger* logger, Config* config, Core* core) {
+UDPNetwork::UDPNetwork(Logger* logger, Config* config, Core* core, RSA* rsa) {
   _logger = new ScopedLogger("UDPNetwork", logger);
   _core = core;
   _config = config;
+  _rsa = rsa;
   _running = false;
 }
 
@@ -79,16 +80,9 @@ bool UDPNetwork::_listen(int port) {
     return false;
   }
 
-  // Create a sending socket
-  _client_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (_client_socket_fd == -1) {
-    _logger->error("Failed creating send socket");
-    return false;
-  }
-
   // Set broadcast enabled on sending socket
   int broadcast_enable = 1;
-  if (setsockopt(_client_socket_fd, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) == -1) {
+  if (setsockopt(_server_socket_fd, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) == -1) {
     _logger->error("Failed setting send socket options (SO_BROADCAST)");
     _shutdown();
     return false;
@@ -123,7 +117,7 @@ void UDPNetwork::_main_loop() {
     if (!pkt) pkt = std::make_shared<Packet>();
 
     // Receive if any
-    if (_receive(node, pkt, from_addr)) {
+    if (_receive(&node, pkt, from_addr)) {
       _process_packet(node, pkt);
     }
 
@@ -147,25 +141,104 @@ void UDPNetwork::_main_loop() {
 }  // namespace Kapua
 
 void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
-  // _logger->error("Processing Packet");
+  uint8_t buffer[KAPUA_MAX_DATA_SIZE];
+  size_t len;
+  std::shared_ptr<Packet> reply;
 
-  if(node) node->update_last_contact();
+  if (node) node->update_last_contact();
+
+  _logger->debug("Packet From " + Util::to_hex64_str(pkt->from_id) + ", " + std::to_string(pkt->length) + " bytes ("+Packet::packet_type_to_string(pkt->type)+")");
 
   switch (pkt->type) {
     case Packet::Ping:
       break;
     case Packet::PublicKeyRequest:
-      if(!node) {
-        _logger->warn("Public Key Request from unknown node");
+      if (!node) {
+        _logger->warn("PublicKeyRequest from unknown node");
         break;
       }
-      _logger->debug("Public Key Request from " + std::to_string(node->id));
+
+      reply = std::make_shared<Packet>(Packet::PublicKeyReply, _core->get_my_id(), node->id);
+
+      if(!reply->write_public_key(_core->get_my_public_key())) {
+        _logger->error("write_public_key failed");
+        break;
+      }
+      
+      node->state = Node::State::KeyExchange;
+      _send(node, reply, node->addr);
+      
       break;
+
     case Packet::PublicKeyReply:
+      if (!node) {
+        _logger->warn("PublicKeyReply from unknown node");
+        break;
+      }
+
+      if(node->state != Node::State::KeyExchange) {
+        _logger->warn("PublicKeyReply from a Node which isnt in KeyExchange");
+        break;
+      }
+
+      _logger->debug("Setting public key for node "+Util::to_hex64_str(node->id));
+      pkt->read_public_key(&node->keys);
+
+      reply = std::make_shared<Packet>(Packet::EncryptionContext, _core->get_my_id(), node->id);
+      node->aes_context.generate();
+
+      if(!_rsa->encrypt_aes_context(&(node->aes_context), node->keys.publicKey, (uint8_t*)&(reply->data), KAPUA_MAX_DATA_SIZE, &len)) {
+        _logger->warn("Encrypting AESContext failed");
+        break;
+      }
+
+      memcpy(reply->data, buffer, len);
+      reply->length = len;
+
+      node->state = Node::State::Handshake;
+      _send(node, reply, node->addr);
+
+
       break;
     case Packet::EncryptionContext:
+      if (!node) {
+        _logger->warn("EncryptionContext from unknown node");
+        break;
+      }
+
+      if(node->state != Node::State::Handshake) {
+        _logger->warn("EncryptionContext from a Node which isnt in Handshake");
+        break;
+      }
+
+      if(!_rsa->decrypt_aes_context(&(node->aes_context), _core->get_my_public_key()->privateKey, (uint8_t*)&(pkt->data), pkt->length, &len)) {
+        _logger->warn("Decrypting AESContext failed");
+        break;
+      }
+
+      reply = std::make_shared<Packet>(Packet::Ready, _core->get_my_id(), node->id);
+      reply->length = 0;
+      _send(node, reply, node->addr);
+
       break;
+    
+    case Packet::Ready:
+      if (!node) {
+        _logger->warn("Ready from unknown node");
+        break;
+      }
+
+      if(node->state != Node::State::Handshake) {
+        _logger->warn("Ready from a Node which isnt in Handshake");
+        break;
+      }
+
+      node->state = Node::State::Connected;
+
+      break;
+
     case Packet::Discovery:
+      // _logger->debug("Discovery from " + Util::to_hex64_str(pkt->from_id));
       break;
     default:
       _logger->warn("Unknown packet type " + std::to_string(pkt->type));
@@ -190,7 +263,7 @@ void UDPNetwork::_broadcast() {
   }
 }
 
-bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& client_addr) {
+bool UDPNetwork::_receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in& client_addr) {
   uint8_t crypt_buffer[KAPUA_MAX_PACKET_SIZE];
   uint8_t* buffer = reinterpret_cast<uint8_t*>(pkt.get());
 
@@ -225,19 +298,19 @@ bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& 
   }
 
   // Packet may be from a known node.
-  node = _core->find_node(pkt->from_id);
+  *node = _core->find_node(pkt->from_id);
 
   // Valid magic Number?
   if (pkt->check_magic_valid()) {
     // If yes, the packet is unencrypted.
-    if (node) {
-      // _logger->debug("Warning: Known node sent us an unencrypted packet");
+    if (*node) {
+      _logger->debug("Warning: Known node sent us an unencrypted packet");
     }
   } else {
     // Packet is either encrypted, or bad. Try a decrypt
-    if (node && node->state >= Node::State::Connected) {
+    if (*node && (*node)->state >= Node::State::Connected) {
       // Check for connected/context
-      if (!_aes_decrypt(node->aes_context, buffer, KAPUA_HEADER_SIZE + pkt->length, crypt_buffer)) {
+      if (!_aes_decrypt((*node)->aes_context, buffer, KAPUA_HEADER_SIZE + pkt->length, crypt_buffer)) {
         _logger->error("Error while decrypting packet");
         return false;
       }
@@ -265,25 +338,26 @@ bool UDPNetwork::_receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& 
 
   // Check from us
   if (pkt->from_id == _core->get_my_id()) {
-    // _logger->debug("Packet received from us");
+    // _logger->debug("Packet received from own ID");
     // Ignore packets from us
     return false;
   }
 
-  std::string client_addr_str = std::string(inet_ntoa(client_addr.sin_addr)) + ":" + std::to_string(ntohs(client_addr.sin_port));
+  std::string client_addr_str = Util::sockaddr_to_string(client_addr);
 
   // Is this a new node?
-  if (!node) {
+  if (!*node) {
     // Add the node
-    node = _core->add_node(pkt->from_id, client_addr);
+    *node = _core->add_node(pkt->from_id, client_addr);
     _logger->info("New node detected, ID: " + Util::to_hex64_str(pkt->from_id) + " (" + client_addr_str + ")");
-    // Queue action to ask node for public key
-    ActionRequestPublicKey rpka_action;
-    rpka_action.node_id = pkt->from_id;
-    _core->queue_action(rpka_action);
-  }
 
-  _logger->debug("Packet From " + Util::to_hex64_str(pkt->from_id) + ", " + std::to_string(size) + " bytes.");
+    std::shared_ptr<Packet> rpk_pkt = std::make_shared<Packet>(Packet::PublicKeyRequest, _core->get_my_id(), pkt->from_id);
+
+    _logger->debug("Sending PublicKeyRequest to NodeID " + std::to_string((*node)->id) + " (" + client_addr_str + ")");
+    if (!_send((*node), rpk_pkt, client_addr)) {
+      _logger->warn("Error Sending PublicKeyRequest to NodeID " + std::to_string((*node)->id) + " (" + client_addr_str + ")");
+    }
+  }
 
   return true;
 }
@@ -295,11 +369,13 @@ bool UDPNetwork::_send(Node* node, std::shared_ptr<Packet> pkt, const sockaddr_i
     if (!_aes_encrypt(node->aes_context, buffer, KAPUA_HEADER_SIZE + pkt->length, crypt_buffer)) {
       _logger->error("Error while encrypting packet");
       return false;
-    } else {
-      buffer = crypt_buffer;
     }
+    buffer = crypt_buffer;
   }
-  return sendto(_client_socket_fd, buffer, KAPUA_HEADER_SIZE + pkt->length, 0, (const struct sockaddr*)&addr, sizeof(addr)) == KAPUA_HEADER_SIZE + pkt->length;
+
+  _logger->debug("Sending Packet To " + Util::to_hex64_str(pkt->to_id) + " (" + Util::sockaddr_to_string(addr) + "), " +
+                 std::to_string(KAPUA_HEADER_SIZE + pkt->length) + " bytes (" + Packet::packet_type_to_string(pkt->type) + ")");
+  return sendto(_server_socket_fd, buffer, KAPUA_HEADER_SIZE + pkt->length, 0, (const struct sockaddr*)&addr, sizeof(addr)) == KAPUA_HEADER_SIZE + pkt->length;
 }
 
 bool UDPNetwork::_shutdown() {
@@ -313,16 +389,6 @@ bool UDPNetwork::_shutdown() {
     _server_socket_fd = -1;
   }
 
-  // Close the client socket
-  if (_client_socket_fd != -1) {
-#ifdef _WIN32
-    closesocket(_client_socket_fd);
-#else
-    close(_client_socket_fd);
-#endif
-    _client_socket_fd = -1;
-  }
-
 #ifdef _WIN32
   // Cleanup if Windows
   WSACleanup();
@@ -330,8 +396,6 @@ bool UDPNetwork::_shutdown() {
 
   return true;
 }
-
-// AES CBC functions
 
 // AES encryption and decryption functions
 bool UDPNetwork::_aes_encrypt(AESContext& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext) {
@@ -401,58 +465,5 @@ bool UDPNetwork::_aes_decrypt(AESContext& context, const uint8_t* ciphertext, si
 
   return true;
 }
-
-// Examples.
-
-// int main() {
-//     // AES-256 key (32 bytes)
-//     unsigned char aes_key[32];
-//     // Securely generate a random AES key
-//     if (RAND_bytes(aes_key, sizeof(aes_key)) != 1) {
-//         std::cerr << "Error generating AES key." << std::endl;
-//         return 1;
-//     }
-
-//     // Generate a secure random IV (Initialization Vector) for AES
-//     unsigned char iv[EVP_MAX_IV_LENGTH];
-//     if (RAND_bytes(iv, EVP_MAX_IV_LENGTH) != 1) {
-//         std::cerr << "Error generating IV." << std::endl;
-//         return 1;
-//     }
-
-//     // Message to encrypt
-//     const char* plaintext = "Hello, OpenSSL AES-256 CBC Encryption!";
-
-//     // Ensure the plaintext is a multiple of the block size (16 bytes for AES)
-//     size_t plaintext_len = strlen(plaintext);
-//     size_t padded_len = (plaintext_len + 15) & ~15;  // Round up to the nearest multiple of 16
-//     uint8_t padded_plaintext[padded_len];
-//     memset(padded_plaintext, 0, sizeof(padded_plaintext));
-//     memcpy(padded_plaintext, plaintext, plaintext_len);
-
-//     // Buffer for ciphertext and decrypted text
-//     uint8_t ciphertext[padded_len];
-//     uint8_t decrypted[padded_len];
-
-//     // Encrypt the plaintext
-//     if (!aes_encrypt(aes_key, iv, padded_plaintext, padded_len, ciphertext)) {
-//         std::cerr << "Error encrypting." << std::endl;
-//         return 1;
-//     }
-
-//     // Decrypt the ciphertext
-//     if (!aes_decrypt(aes_key, iv, ciphertext, padded_len, decrypted)) {
-//         std::cerr << "Error decrypting." << std::endl;
-//         return 1;
-//     }
-
-//     // Display the results
-//     std::cout << "Original Text: " << plaintext << std::endl;
-//     std::cout << "Encrypted Text: ";
-//     for (size_t i = 0; i < padded_len; ++i) {
-//         std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)ciphertext[i];
-//     }
-//     std::cout << std::endl
-// }
 
 }  // namespace Kapua

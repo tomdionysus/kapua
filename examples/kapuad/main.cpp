@@ -9,6 +9,9 @@
 #include "Logger.hpp"
 #include "Protocol.hpp"
 #include "UDPNetwork.hpp"
+#include "RSA.hpp"
+
+#include <fstream>
 
 using namespace std;
 
@@ -28,8 +31,16 @@ void signal_stop(int signum) {
 int main(int ac, char** av) {
   Kapua::IOStreamLogger stdlog(&cout, Kapua::LOG_LEVEL_DEBUG);
   Kapua::Config config(&stdlog);
-  Kapua::Core core(&stdlog, &config);
-  Kapua::UDPNetwork local_discover(&stdlog, &config, &core);
+  Kapua::RSA rsa(&stdlog, &config);
+  Kapua::Core core(&stdlog, &config, &rsa);
+
+  if(!std::ifstream("private.pem").good()) {
+    rsa.generate_rsa_key_pair("public.pem", "private.pem", 2048);
+  }
+
+  rsa.load_rsa_key_pair("public.pem", "private.pem", core._keys);
+
+  Kapua::UDPNetwork local_discover(&stdlog, &config, &core, &rsa);
 
   if (!config.load_yaml("config.yaml")) {
     stdlog.error("Cannot load YAML config");

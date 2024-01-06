@@ -166,4 +166,12 @@ bool RSA::decrypt_aes_context(AESContext* context, EVP_PKEY* privateKey, const u
   return true;
 }
 
+size_t RSA::get_pkey_size(EVP_PKEY* pKey) {
+  if (pKey == nullptr) {
+    // Handle the error or return 0, depending on how you want to handle null pointers
+    return 0;
+  }
+  return EVP_PKEY_size(pKey);
+}
+
 }  // namespace Kapua

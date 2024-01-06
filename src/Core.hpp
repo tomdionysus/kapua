@@ -10,22 +10,22 @@
 #define KAPUA_VERSION_MINOR 0
 #define KAPUA_VERSION_PATCH 1
 
+#include <atomic>
+#include <boost/thread.hpp>
+#include <condition_variable>
+#include <iostream>
 #include <mutex>
+#include <queue>
 #include <random>
 #include <unordered_map>
 #include <vector>
-#include <iostream>
-#include <boost/thread.hpp>
-#include <atomic>
-#include <queue>
-#include <condition_variable>
 
+#include "Actions.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
 #include "Node.hpp"
 #include "RSA.hpp"
 #include "SockaddrHashable.hpp"
-#include "Actions.hpp"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -46,7 +46,7 @@ typedef struct Version {
 
 class Core {
  public:
-  Core(Logger* logger, Config* config);
+  Core(Logger* logger, Config* config, RSA* rsa);
   ~Core();
 
   bool start();
@@ -62,12 +62,17 @@ class Core {
   void action_request_public_key(Action action);
 
   uint64_t get_my_id();
+  KeyPair* get_my_public_key();
 
   void get_version(Version_t* version);
+  
+  KeyPair _keys;
 
  protected:
   Logger* _logger;
   Config* _config;
+
+  RSA* _rsa;
 
   uint64_t _my_id;
 

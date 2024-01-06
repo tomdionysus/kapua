@@ -21,6 +21,7 @@ class Node {
  public:
   enum class State {
     Initialised,
+    KeyExchange,
     Handshake,
     Connected,
   };
@@ -42,6 +43,8 @@ class Node {
   SockaddrHashable addr;
   uint64_t id;
   State state;
+
+  KeyPair keys;
 
   AESContext aes_context;
 

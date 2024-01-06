@@ -8,22 +8,11 @@
 
 namespace Kapua {
 
-enum ActionType : uint8_t {
-  RequestPublicKey,
-};
+enum ActionType : uint8_t {};
 
 class Action {
-public:
+ public:
   ActionType type;
-};
-
-class ActionRequestPublicKey: public Action {
-public:
-  uint64_t node_id;
-
-  ActionRequestPublicKey() {
-    type = ActionType::RequestPublicKey;
-  }
 };
 
 };  // namespace Kapua

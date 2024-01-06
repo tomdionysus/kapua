@@ -5,16 +5,15 @@
 // Copyright (c) Tom Cully 2023
 //
 #include "Core.hpp"
-
 #include "Logger.hpp"
 
 using namespace std;
 
 namespace Kapua {
-Core ::Core(Logger* logger, Config* config) : _running(false) {
+Core ::Core(Logger* logger, Config* config, RSA* rsa) : _running(false) {
   _logger = new Kapua::ScopedLogger("Core", logger);
-
   _config = config;
+  _rsa = rsa;
 }
 
 Core ::~Core() {
@@ -75,45 +74,37 @@ Node* Core::find_node(sockaddr_in addr) {
 bool Core::queue_action(Action action) {
   std::lock_guard<std::mutex> lock(_action_mutex);
   _actions.push(action);
-  _action_waiting.notify_one(); // Notify the waiting thread
+  _action_waiting.notify_one();  // Notify the waiting thread
   return true;
 }
 
 uint64_t Core::get_my_id() { return _my_id; }
 
-void Core::_main_loop() {
- if(_running) {
-  _logger->error("Start called but already running");
-   return;
- }
+KeyPair* Core::get_my_public_key() { return &_keys; }
 
+void Core::_main_loop() {
+  if (_running) {
+    _logger->error("Start called but already running");
+    return;
+  }
+  _running = true;
   _logger->debug("Started");
 
-  _running = true;
-
- while(_running) {
+  while (_running) {
     std::unique_lock<std::mutex> lock(_action_mutex);
-    if (_action_waiting.wait_for(lock, std::chrono::milliseconds(100), [this]{ return !_actions.empty(); })) {
-        while (!_actions.empty()) {
-            Action action = _actions.front();
-            _actions.pop();
-            switch(action.type) {
-              case ActionType::RequestPublicKey:
-                action_request_public_key(action);
-                break;
-                default:
-                _logger->error("Unknown action type");
-            }
+    if (_action_waiting.wait_for(lock, std::chrono::milliseconds(100), [this] { return !_actions.empty(); })) {
+      while (!_actions.empty()) {
+        Action action = _actions.front();
+        _actions.pop();
+        switch (action.type) {
+          default:
+            _logger->error("Unknown action type");
         }
+      }
     }
- }
+  }
 
- _logger->debug("Stopping...");
-}
-
-void Core::action_request_public_key(Action action) {
-  ActionRequestPublicKey *arpk = static_cast<ActionRequestPublicKey*>(&action);
-  _logger->debug("ActionRequestPublicKey NodeId "+std::to_string(arpk->node_id));
+  _logger->debug("Stopping...");
 }
 
 uint64_t Core::_get_random_id() {

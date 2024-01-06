@@ -39,7 +39,7 @@
 namespace Kapua {
 class UDPNetwork {
  public:
-  UDPNetwork(Logger* logger, Config* config, Core* core);
+  UDPNetwork(Logger* logger, Config* config, Core* core, RSA* rsa);
   ~UDPNetwork();
 
   bool start(int port);
@@ -50,7 +50,7 @@ class UDPNetwork {
   void _main_loop();
   void _broadcast();
   bool _send(Node* node, std::shared_ptr<Packet> pkt, const sockaddr_in& addr);
-  bool _receive(Node* node, std::shared_ptr<Packet> pkt, sockaddr_in& client_addr);
+  bool _receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in& client_addr);
   bool _shutdown();
 
   bool _aes_encrypt(AESContext& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext);
@@ -60,11 +60,11 @@ class UDPNetwork {
 
   Core* _core;
   Config* _config;
+  RSA* _rsa;
 
   uint16_t _port;
 
   int _server_socket_fd;
-  int _client_socket_fd;
   sockaddr_in _server_addr;
 
   Logger* _logger;

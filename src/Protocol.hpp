@@ -26,9 +26,13 @@
 namespace Kapua {
 
 #define KAPUA_MAX_PACKET_SIZE 1450
+#define KAPUA_HEADER_SIZE 44
+#define KAPUA_MAX_DATA_SIZE (KAPUA_MAX_PACKET_SIZE-KAPUA_HEADER_SIZE)
+
 #define KAPUA_ID_GROUP 0xFFFFFFFFFFFFFF01
 #define KAPUA_ID_BROADCAST 0xFFFFFFFFFFFFFFFF
 #define KAPUA_ID_NULL 0x0000000000000000
+
 
 typedef struct Peer {
   uint64_t id;
@@ -42,6 +46,7 @@ struct Packet {
     PublicKeyRequest,
     PublicKeyReply,
     EncryptionContext,
+    Ready,
 
     Discovery = 0xFFFF,
   };
@@ -59,11 +64,9 @@ struct Packet {
   uint64_t request_id;  // The request packet ID, if this is a reply, or 0x0000000000000000
   uint16_t length = 0;  // The length of the data to follow
 
-#define KAPUA_HEADER_SIZE 44
-
   // --- This is the end of header
 
-  uint8_t data[KAPUA_MAX_PACKET_SIZE - KAPUA_HEADER_SIZE];
+  uint8_t data[KAPUA_MAX_DATA_SIZE];
 
   // Methods
 
@@ -83,8 +86,6 @@ struct Packet {
 
   Packet(PacketType pType, uint64_t fromId, uint64_t toId, uint64_t requestId) : Packet(pType, fromId, toId) { request_id = requestId; }
 
-  Packet(uint8_t* buffer, uint16_t length) { memcpy(this, buffer, length); }
-
   bool check_magic_valid() { return std::memcmp(magic, KAPUA_MAGIC_NUMBER.data(), KAPUA_MAGIC_NUMBER.size()) == 0; }
 
   bool check_version_valid(bool strict = false) {
@@ -98,15 +99,62 @@ struct Packet {
   std::string get_version_string() { return std::to_string(version.major) + "." + std::to_string(version.minor) + "." + std::to_string(version.patch); }
 
   // Packet PublicKeyReply
-  void write_public_key(KeyPair& key_pair) {
-    length = sizeof(KeyPair::publicKey);
-    std::memcpy(&data, &key_pair.publicKey, length);
+  bool write_public_key(KeyPair *key_pair) {
+    if (key_pair->publicKey == nullptr) {
+        // Handle error: public key is not initialized
+        throw std::runtime_error("Public key is null");
+    }
+
+    int len = i2d_PublicKey(key_pair->publicKey, nullptr);
+    if (len <= 0) {
+        // Handle error: failed to get the length
+        throw std::runtime_error("Failed to get the length of the public key");
+    }
+
+    if(len > KAPUA_MAX_DATA_SIZE) {
+        throw std::runtime_error("Length of encoded public key is larger than KAPUA_MAX_DATA_SIZE");
+    }
+
+    unsigned char *buffer = (unsigned char*)&data;
+    unsigned char **ptrToBuffer = &buffer;
+
+    if (i2d_PublicKey(key_pair->publicKey, ptrToBuffer) != len) {
+        // Handle error: failed to serialize the key
+        throw std::runtime_error("Failed to serialize the public key");
+    }
+
+    length = len;
+
+    return true;
   }
 
-  bool read_public_key(KeyPair& key_pair) {
-    if (length != sizeof(KeyPair::publicKey)) return false;
-    std::memcpy(&key_pair.publicKey, &data, length);
+  bool read_public_key(KeyPair *key_pair) {
+    const unsigned char *buf = (unsigned char *)&data;
+
+    key_pair->publicKey = d2i_PublicKey(EVP_PKEY_RSA, nullptr, &buf, length);
+    if (key_pair->publicKey == nullptr) {
+        // Handle error: deserialization failed
+        throw std::runtime_error("Failed to deserialize the public key");
+    }
+
     return true;
+  }
+
+  static const std::string packet_type_to_string(PacketType pt) {
+    switch (pt) {
+      case PacketType::Ping:
+        return "Ping";
+      case PacketType::PublicKeyRequest:
+        return "PublicKeyRequest";
+      case PacketType::PublicKeyReply:
+        return "PublicKeyReply";
+      case PacketType::EncryptionContext:
+        return "EncryptionContext";
+      case PacketType::Discovery:
+        return "Discovery";
+      default:
+        return "Unknown";
+    }
   }
 };
 #pragma pack(pop)
