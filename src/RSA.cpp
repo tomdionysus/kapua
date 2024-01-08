@@ -110,7 +110,7 @@ bool RSA::load_rsa_key_pair(const std::string& publicKeyFile, const std::string&
   return success;
 }
 
-bool RSA::encrypt_aes_context(const AESContext* context, EVP_PKEY* publicKey, uint8_t* out_buffer, size_t in_size, size_t* out_size) {
+bool RSA::encrypt_aes_context(const AESKey* context, EVP_PKEY* publicKey, uint8_t* out_buffer, size_t in_size, size_t* out_size) {
   EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(publicKey, nullptr);
 
   if (!ctx || EVP_PKEY_encrypt_init(ctx) <= 0) {
@@ -120,7 +120,7 @@ bool RSA::encrypt_aes_context(const AESContext* context, EVP_PKEY* publicKey, ui
   }
 
   // First call to determine the buffer size required for the encrypted data
-  if (EVP_PKEY_encrypt(ctx, nullptr, out_size, reinterpret_cast<const uint8_t*>(context), sizeof(AESContext)) <= 0) {
+  if (EVP_PKEY_encrypt(ctx, nullptr, out_size, reinterpret_cast<const uint8_t*>(context), sizeof(AESKey)) <= 0) {
     _logger->error("Error determining encrypted size.");
     EVP_PKEY_CTX_free(ctx);
     return false;
@@ -134,7 +134,7 @@ bool RSA::encrypt_aes_context(const AESContext* context, EVP_PKEY* publicKey, ui
   }
 
   // Actual encryption
-  if (EVP_PKEY_encrypt(ctx, out_buffer, out_size, reinterpret_cast<const uint8_t*>(context), sizeof(AESContext)) != 1) {
+  if (EVP_PKEY_encrypt(ctx, out_buffer, out_size, reinterpret_cast<const uint8_t*>(context), sizeof(AESKey)) != 1) {
     _logger->error("Error encrypting context.");
     EVP_PKEY_CTX_free(ctx);
     return false;
@@ -144,7 +144,7 @@ bool RSA::encrypt_aes_context(const AESContext* context, EVP_PKEY* publicKey, ui
   return true;
 }
 
-bool RSA::decrypt_aes_context(AESContext* context, EVP_PKEY* privateKey, const uint8_t* in_buffer, size_t in_size, size_t* out_size) {
+bool RSA::decrypt_aes_context(AESKey* context, EVP_PKEY* privateKey, const uint8_t* in_buffer, size_t in_size, size_t* out_size) {
   EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(privateKey, nullptr);
   if (!ctx || EVP_PKEY_decrypt_init(ctx) <= 0) {
     _logger->error("Error initializing decryption context.");
@@ -158,8 +158,8 @@ bool RSA::decrypt_aes_context(AESContext* context, EVP_PKEY* privateKey, const u
     return false;
   }
 
-  if (*out_size != sizeof(AESContext)) {
-    _logger->error("Decrypted size mismatch with AESContext.");
+  if (*out_size != sizeof(AESKey)) {
+    _logger->error("Decrypted size mismatch with AESKey.");
     EVP_PKEY_CTX_free(ctx);
     return false;
   }

@@ -28,9 +28,8 @@ class RSATest : public ::testing::Test {
     return f.good();
   }
 
-  AESContext generate_random_aes_context() {
-    AESContext context;
-    RAND_bytes(context.iv, sizeof(context.iv));
+  AESKey generate_random_aes_context() {
+    AESKey context;
     RAND_bytes(context.key, sizeof(context.key));
     return context;
   }
@@ -93,30 +92,30 @@ TEST_F(RSATest, EncryptAndDecryptAESContext) {
   KeyPair keyPair;
   ASSERT_TRUE(rsa->load_rsa_key_pair("fixtures/public.pem", "fixtures/private.pem", keyPair));
 
-  // Generate a random AESContext
-  AESContext originalContext = generate_random_aes_context();
+  // Generate a random AESKey
+  AESKey originalContext = generate_random_aes_context();
 
   // Allocate buffer for encryption (2048 bits / 8 bits per byte)
   const size_t bufferSize = 2048 / 8;
   uint8_t buffer[bufferSize];
   size_t encryptedSize;
 
-  // Encrypt the AESContext with the public key
+  // Encrypt the AESKey with the public key
   ASSERT_TRUE(rsa->encrypt_aes_context(&originalContext, keyPair.publicKey, buffer, bufferSize, &encryptedSize));
 
   // Check the encrypted is different
   ASSERT_NE(encryptedSize, 0);
-  ASSERT_NE(memcmp(&originalContext, buffer, sizeof(AESContext)), 0);
+  ASSERT_NE(memcmp(&originalContext, buffer, sizeof(AESKey)), 0);
 
-  // Decrypt the encrypted AESContext
-  AESContext decryptedContext;
+  // Decrypt the encrypted AESKey
+  AESKey decryptedContext;
 
   size_t decryptedSize;
   ASSERT_TRUE(rsa->decrypt_aes_context(&decryptedContext, keyPair.privateKey, buffer, encryptedSize, &decryptedSize));
 
   // Compare the decrypted context with the original
-  ASSERT_EQ(decryptedSize, sizeof(AESContext));
-  ASSERT_EQ(memcmp(&originalContext, &decryptedContext, sizeof(AESContext)), 0);
+  ASSERT_EQ(decryptedSize, sizeof(AESKey));
+  ASSERT_EQ(memcmp(&originalContext, &decryptedContext, sizeof(AESKey)), 0);
 
   // Clean up
   EVP_PKEY_free(keyPair.publicKey);

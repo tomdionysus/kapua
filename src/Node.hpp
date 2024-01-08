@@ -47,8 +47,8 @@ class Node {
 
   KeyPair keys;
 
-  AESContext aes_context_tx;
-  AESContext aes_context_rx;
+  AESKey aes_context_tx;
+  AESKey aes_context_rx;
 
   std::chrono::time_point<std::chrono::steady_clock> last_contact_time;
 

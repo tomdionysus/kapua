@@ -63,6 +63,7 @@ struct Packet {
   uint64_t request_id;  // The request packet ID, if this is a reply, or 0x0000000000000000
   uint16_t length = 0;  // The length of the data to follow
 
+
   // --- This is the end of header
 
   uint8_t data[KAPUA_MAX_DATA_SIZE];

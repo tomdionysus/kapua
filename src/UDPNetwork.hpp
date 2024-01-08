@@ -54,9 +54,13 @@ class UDPNetwork {
   bool _receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in& client_addr);
   bool _shutdown();
 
-  bool _aes_encrypt(AESContext& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext, size_t *ciphertext_len);
-  bool _aes_decrypt(AESContext& context, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext, size_t *plaintext_len);
+  bool _aes_encrypt(AESKey& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext, size_t *ciphertext_len);
+  bool _aes_decrypt(AESKey& context, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext, size_t *plaintext_len);
   std::string get_aes_error_string();
+
+  void _generate_iv(uint8_t* ptr) {
+    RAND_bytes(ptr, 32);
+  }
 
   void _process_packet(Node* node, std::shared_ptr<Packet> packet);
 
