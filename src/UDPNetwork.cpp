@@ -194,7 +194,7 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
       // Generate and set a random AESKey (session key) and encrypt it using the node public key, then send it to the node.
       reply = std::make_shared<Packet>(Packet::EncryptionContext, _core->get_my_id(), node->id);
       node->aes_context_tx.generate();
-      _logger->debug("Generated AESKey Key: "+Util::to_hex(node->aes_context_tx.key, 32));
+      // _logger->debug("Generated AESKey Key: "+Util::to_hex(node->aes_context_tx.key, sizeof(AESKey));
       if (!_rsa->encrypt_aes_context(&(node->aes_context_tx), node->keys.publicKey, (uint8_t*)&(reply->data), KAPUA_MAX_DATA_SIZE, &len)) {
         _logger->warn("Encrypting AESKey failed");
         break;
@@ -227,7 +227,7 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
         break;
       }
 
-      _logger->debug("Received AESKey Key: "+Util::to_hex(node->aes_context_rx.key, 32));
+      // _logger->debug("Received AESKey Key: "+Util::to_hex(node->aes_context_rx.key, sizeof(AESKey));
 
       // Reply with the Ready message (this will now be encrypted with the session key)
       reply = std::make_shared<Packet>(Packet::Ready, _core->get_my_id(), node->id);
@@ -255,6 +255,8 @@ void UDPNetwork::_process_packet(Node* node, std::shared_ptr<Packet> pkt) {
 
       // Node state is now Connected
       node->state = Node::State::Connected;
+
+      _logger->debug("Node "+Util::to_hex64_str(node->id)+" Completed AES Handshake");
 
       break;
 
@@ -431,9 +433,10 @@ bool UDPNetwork::_aes_encrypt(AESKey& context, const uint8_t* plaintext, size_t 
   EVP_CIPHER_CTX* ctx;
   int len;
 
-  _logger->debug("Generate IV: "+Util::to_hex(ciphertext, 32));
+  // Generate the packet IV
   _generate_iv(ciphertext);
-   (*ciphertext_len) = 32;
+  // _logger->debug("Generate IV: "+Util::to_hex(ciphertext, sizeof(AESKey)));
+   (*ciphertext_len) = sizeof(AESKey);
 
   // Create and initialize the context
   if (!(ctx = EVP_CIPHER_CTX_new())) return false;
@@ -445,14 +448,14 @@ bool UDPNetwork::_aes_encrypt(AESKey& context, const uint8_t* plaintext, size_t 
   }
 
   // Provide the plaintext to be encrypted
-  if (EVP_EncryptUpdate(ctx, ciphertext+32, &len, plaintext, plaintext_len) != 1) {
+  if (EVP_EncryptUpdate(ctx, ciphertext+sizeof(AESKey), &len, plaintext, plaintext_len) != 1) {
     EVP_CIPHER_CTX_free(ctx);
     return false;
   }
   (*ciphertext_len) += len;
 
   // Finalize the encryption
-  if (EVP_EncryptFinal_ex(ctx, ciphertext+32 + len, &len) != 1) {
+  if (EVP_EncryptFinal_ex(ctx, ciphertext+sizeof(AESKey) + len, &len) != 1) {
     EVP_CIPHER_CTX_free(ctx);
     return false;
   }
@@ -468,7 +471,7 @@ bool UDPNetwork::_aes_decrypt(AESKey& context, const uint8_t* ciphertext, size_t
   EVP_CIPHER_CTX* ctx;
   int len;
 
-  _logger->debug("Decrypt IV: "+Util::to_hex(ciphertext, 32));
+  // _logger->debug("Decrypt IV: "+Util::to_hex(ciphertext, sizeof(AESKey)));
 
   // Create and initialize the context
   if (!(ctx = EVP_CIPHER_CTX_new())) return false;
@@ -481,7 +484,7 @@ bool UDPNetwork::_aes_decrypt(AESKey& context, const uint8_t* ciphertext, size_t
   }
 
   // Provide the ciphertext to be decrypted
-  if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext+32, ciphertext_len-32) != 1) {
+  if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext+sizeof(AESKey), ciphertext_len-sizeof(AESKey)) != 1) {
     _logger->warn("EVP_DecryptUpdate failed");
     EVP_CIPHER_CTX_free(ctx);
     return false;
