@@ -8,6 +8,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <openssl/err.h>
 #include <sys/time.h>
 
 #include <atomic>
@@ -53,8 +54,9 @@ class UDPNetwork {
   bool _receive(Node** node, std::shared_ptr<Packet> pkt, sockaddr_in& client_addr);
   bool _shutdown();
 
-  bool _aes_encrypt(AESContext& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext);
-  bool _aes_decrypt(AESContext& context, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext);
+  bool _aes_encrypt(AESContext& context, const uint8_t* plaintext, size_t plaintext_len, uint8_t* ciphertext, size_t *ciphertext_len);
+  bool _aes_decrypt(AESContext& context, const uint8_t* ciphertext, size_t ciphertext_len, uint8_t* plaintext, size_t *plaintext_len);
+  std::string get_aes_error_string();
 
   void _process_packet(Node* node, std::shared_ptr<Packet> packet);
 

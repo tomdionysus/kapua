@@ -4,13 +4,13 @@
 
 kapua has been developed to have as few external dependencies as possible. The current list is as follows:
 
-* [boost](https://github.com/boostorg/boost)
-* [openssl](https://github.com/openssl/openssl)
-* [libyaml](https://github.com/yaml/libyaml)
+- [boost](https://github.com/boostorg/boost)
+- [openssl](https://github.com/openssl/openssl)
+- [libyaml](https://github.com/yaml/libyaml)
 
 **Build Dependencies**
 
-* [cmake](https://github.com/Kitware/CMake)
+- [cmake](https://github.com/Kitware/CMake)
 
 ### OpenSSL
 
@@ -30,14 +30,17 @@ ldconfig
 
 For your convenience, here are the package manager commands to install the dependencies for your platform.
 
-**CAVEAT:** (Jan 2024) You must still download OpenSSL v3.2.0, build it from source, and install it. 
+**CAVEAT:** (Jan 2024) You must still download OpenSSL v3.2.0, build it from source, and install it.
 
 ### MacOSX
+
 ```bash
 brew install cmake boost yaml-cpp
 ```
 
 ### Alpine Linux
+
+**NOTE:** You will need to enable the community repos by modifying `/etc/apk/repositories` - uncomment the `http://mirror.2degrees.nz/alpine/v3.19/community` line and then run `apk update`.
 
 ```bash
 apk add cmake boost-dev yaml-cpp-dev
